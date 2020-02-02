@@ -1,0 +1,51 @@
+[0m[[0m[0minfo[0m] [0m[0mFlyway Community Edition 6.2.0 by Redgate[0m
+[0m[[0m[0mdebug[0m] [0m[0mScanning for classpath resources at 'classpath:db/migration' ...[0m
+[0m[[0m[0mdebug[0m] [0m[0mDetermining location urls for classpath:db/migration using ClassLoader java.net.URLClassLoader@66e23262 ...[0m
+[0m[[0m[33mwarn[0m] [0m[0mUnable to resolve location classpath:db/migration[0m
+[0m[[0m[0mdebug[0m] [0m[0mScanning for classes at classpath:db/migration[0m
+[0m[[0m[0mdebug[0m] [0m[0mScanning for classpath resources at 'classpath:migration' ...[0m
+[0m[[0m[0mdebug[0m] [0m[0mDetermining location urls for classpath:migration using ClassLoader java.net.URLClassLoader@66e23262 ...[0m
+[0m[[0m[0mdebug[0m] [0m[0mScanning URL: file:/Users/gerryfletch/two/scala/user-service/target/scala-2.13/classes/migration[0m
+[0m[[0m[0mdebug[0m] [0m[0mJBoss VFS v2 available: false[0m
+[0m[[0m[0mdebug[0m] [0m[0mScanning starting at classpath root in filesystem: /Users/gerryfletch/two/scala/user-service/target/scala-2.13/classes/[0m
+[0m[[0m[0mdebug[0m] [0m[0mScanning for resources in path: /Users/gerryfletch/two/scala/user-service/target/scala-2.13/classes/migration (migration)[0m
+[0m[[0m[0mdebug[0m] [0m[0mFound resource: migration/V0__Create_Schema.sql[0m
+[0m[[0m[0mdebug[0m] [0m[0mFound resource: migration/V1__Create_Couples_Table.sql[0m
+[0m[[0m[0mdebug[0m] [0m[0mFound resource: migration/V2__Create_Users_Table.sql[0m
+[0m[[0m[0mdebug[0m] [0m[0mScanning for classes at classpath:migration[0m
+[0m[[0m[0minfo[0m] [0m[0mDatabase: jdbc:mysql://localhost:3306 (MySQL 8.0)[0m
+[0m[[0m[0mdebug[0m] [0m[0mDriver  : MySQL Connector/J mysql-connector-java-8.0.19 (Revision: a0ca826f5cdf51a98356fdfb1bf251eb042f80bf)[0m
+[0m[[0m[0mdebug[0m] [0m[0mDDL Transactions Supported: false[0m
+[0m[[0m[0mdebug[0m] [0m[0mSchemas: users[0m
+[0m[[0m[0mdebug[0m] [0m[0mDefault schema: null[0m
+[0m[[0m[0mdebug[0m] [0m[0mScanning for SQL callbacks ...[0m
+[0m[[0m[0mdebug[0m] [0m[0mValidating migrations ...[0m
+[0m[[0m[0mdebug[0m] [0m[0mFiltering out resource: migration/V0__Create_Schema.sql (filename: V0__Create_Schema.sql)[0m
+[0m[[0m[0mdebug[0m] [0m[0mFiltering out resource: migration/V1__Create_Couples_Table.sql (filename: V1__Create_Couples_Table.sql)[0m
+[0m[[0m[0mdebug[0m] [0m[0mFiltering out resource: migration/V2__Create_Users_Table.sql (filename: V2__Create_Users_Table.sql)[0m
+[0m[[0m[0minfo[0m] [0m[0mSuccessfully validated 3 migrations (execution time 00:00.022s)[0m
+[0m[[0m[0minfo[0m] [0m[0mCurrent version of schema `users`: << Empty Schema >>[0m
+[0m[[0m[0mdebug[0m] [0m[0mParsing V0__Create_Schema.sql ...[0m
+[0m[[0m[0mdebug[0m] [0m[0mStarting migration of schema `users` to version 0 - Create Schema ...[0m
+[0m[[0m[0minfo[0m] [0m[0mMigrating schema `users` to version 0 - Create Schema[0m
+[0m[[0m[33mwarn[0m] [0m[0mDB: Can't create database 'users'; database exists (SQL State: HY000 - Error Code: 1007)[0m
+[0m[[0m[0mdebug[0m] [0m[0mSuccessfully completed migration of schema `users` to version 0 - Create Schema[0m
+[0m[[0m[0mdebug[0m] [0m[0mLocking table `users`.`flyway_schema_history`...[0m
+[0m[[0m[0mdebug[0m] [0m[0mLock acquired for table `users`.`flyway_schema_history`[0m
+[0m[[0m[0mdebug[0m] [0m[0mSchema History table `users`.`flyway_schema_history` successfully updated to reflect changes[0m
+[0m[[0m[0mdebug[0m] [0m[0mParsing V1__Create_Couples_Table.sql ...[0m
+[0m[[0m[0mdebug[0m] [0m[0mStarting migration of schema `users` to version 1 - Create Couples Table ...[0m
+[0m[[0m[0minfo[0m] [0m[0mMigrating schema `users` to version 1 - Create Couples Table[0m
+[0m[[0m[0mdebug[0m] [0m[0mSuccessfully completed migration of schema `users` to version 1 - Create Couples Table[0m
+[0m[[0m[0mdebug[0m] [0m[0mLocking table `users`.`flyway_schema_history`...[0m
+[0m[[0m[0mdebug[0m] [0m[0mLock acquired for table `users`.`flyway_schema_history`[0m
+[0m[[0m[0mdebug[0m] [0m[0mSchema History table `users`.`flyway_schema_history` successfully updated to reflect changes[0m
+[0m[[0m[0mdebug[0m] [0m[0mParsing V2__Create_Users_Table.sql ...[0m
+[0m[[0m[0mdebug[0m] [0m[0mStarting migration of schema `users` to version 2 - Create Users Table ...[0m
+[0m[[0m[0minfo[0m] [0m[0mMigrating schema `users` to version 2 - Create Users Table[0m
+[0m[[0m[0mdebug[0m] [0m[0mSuccessfully completed migration of schema `users` to version 2 - Create Users Table[0m
+[0m[[0m[0mdebug[0m] [0m[0mLocking table `users`.`flyway_schema_history`...[0m
+[0m[[0m[0mdebug[0m] [0m[0mLock acquired for table `users`.`flyway_schema_history`[0m
+[0m[[0m[0mdebug[0m] [0m[0mSchema History table `users`.`flyway_schema_history` successfully updated to reflect changes[0m
+[0m[[0m[0minfo[0m] [0m[0mSuccessfully applied 3 migrations to schema `users` (execution time 00:00.248s)[0m
+[0m[[0m[0mdebug[0m] [0m[0mMemory usage: 107 of 256M[0m
