@@ -14,7 +14,7 @@ object UserRecordMapper extends RecordMapper[UserRecord, Either[InvalidUserError
 
 object UserService {
   def getUser(uid: Int): Either[ErrorResponse, User] = {
-    val userRecord: Option[UserRecord] = UserDao.getUser
+    val userRecord: Option[UserRecord] = UserDao.getUser(uid)
     if (userRecord.isEmpty) return Left(NotFoundError(s"User with UID $uid does not exist."))
 
     UserRecordMapper.from(userRecord.get) match {

@@ -2,7 +2,6 @@ package user
 
 import java.util.Date
 
-import db.RecordMapper
 import db.ctx._
 
 case class UserRecord(
@@ -18,7 +17,7 @@ case class UserRecord(
                      )
 
 object UserDao {
-  def getUser: Option[UserRecord] = run(quote {
-    querySchema[UserRecord]("user").filter(u => u.email == "1998Gerry@gmail.com")
+  def getUser(uid: Int): Option[UserRecord] = run(quote {
+    querySchema[UserRecord]("user").filter(u => u.uid == lift(uid))
   }).headOption
 }
