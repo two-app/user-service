@@ -1,8 +1,6 @@
 package user
 
 import org.scalatest.flatspec.AnyFlatSpec
-import user.model.ObjectValidationError.InvalidUserError
-import user.model.User
 
 class UserTest extends AnyFlatSpec {
 

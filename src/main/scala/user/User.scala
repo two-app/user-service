@@ -1,14 +1,6 @@
-package user.model
+package user
 
-import user.model.ObjectValidationError.InvalidUserError
-
-sealed trait ObjectValidationError
-
-object ObjectValidationError {
-
-  case class InvalidUserError(reason: String) extends ObjectValidationError
-
-}
+final case class InvalidUserError(reason: String)
 
 final case class User(uid: Int, firstName: String, lastName: String)
 
