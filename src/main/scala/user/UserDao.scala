@@ -17,16 +17,8 @@ case class UserRecord(
                        createdAt: Date
                      )
 
-object UserRecordMapper extends RecordMapper[UserRecord, Either[InvalidUserError, User]] {
-  override def from(record: UserRecord): Either[InvalidUserError, User] = {
-    User.from(record.uid, record.firstName, record.lastName)
-  }
-
-  override def to(model: Either[InvalidUserError, User]): UserRecord = null
-}
-
 object UserDao {
-  def getUser: Option[Either[InvalidUserError, User]] = run(quote {
+  def getUser: Option[UserRecord] = run(quote {
     querySchema[UserRecord]("user").filter(u => u.email == "1998Gerry@gmail.com")
-  }).headOption.map(r => UserRecordMapper.from(r))
+  }).headOption
 }
