@@ -6,12 +6,8 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import request.UserContext
 import response.ErrorResponse
-import spray.json.DefaultJsonProtocol._
-import spray.json._
 
-class UserRoute {
-  implicit val userFormat: RootJsonFormat[User] = jsonFormat3(User.apply)
-
+object UserRoute {
   val route: Route = get {
     path("self") {
       extractRequest { request =>
@@ -22,15 +18,13 @@ class UserRoute {
 
   def getSelf(request: HttpRequest): Route = {
     val uid: Int = UserContext.from(request).map(u => u.uid) match {
-      case Left(e) => return respondWithError(e)
+      case Left(e) => return complete(e.status, e)
       case Right(v) => v
     }
 
     UserService.getUser(uid) match {
-      case Left(error: ErrorResponse) => complete(error.status, error.reason)
+      case Left(e: ErrorResponse) => complete(e.status, e)
       case Right(user: User) => complete(user)
     }
   }
-
-  def respondWithError(e: ErrorResponse): Route = complete(e.status, e.reason)
 }

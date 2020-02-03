@@ -2,7 +2,7 @@ import akka.http.scaladsl.server.{HttpApp, Route}
 import user.UserRoute
 
 object Server extends HttpApp {
-  override protected def routes: Route = new UserRoute().route
+  override protected def routes: Route = UserRoute.route
 }
 
 object WebServer {
