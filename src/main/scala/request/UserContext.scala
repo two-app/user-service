@@ -35,7 +35,7 @@ object UserContext {
       .getOrElse(return Left(AuthorizationError("Authorization not provided.")))
       .value()
 
-    if (header == null || header.isEmpty) return Left(AuthorizationError("Authorization not provided."))
+    if (header.isEmpty) return Left(AuthorizationError("Authorization not provided."))
 
     val parts = header.split(" ")
     if (parts.length != 2 || parts(0) != "Bearer") return Left(AuthorizationError("Invalid header format."))

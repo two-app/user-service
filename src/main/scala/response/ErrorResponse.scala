@@ -21,7 +21,7 @@ object ErrorResponse {
       status match {
         case StatusCodes.Unauthorized.intValue => AuthorizationError(reason)
         case StatusCodes.InternalServerError.intValue => InternalError(reason)
-        case StatusCodes.BadRequest.intValue => InvalidDataError(reason)
+        case StatusCodes.BadRequest.intValue => ClientError(reason)
         case StatusCodes.NotFound.intValue => NotFoundError(reason)
       }
     }
@@ -40,7 +40,7 @@ object ErrorResponse {
     override def status: StatusCode = StatusCodes.InternalServerError
   }
 
-  case class InvalidDataError(reason: String) extends ErrorResponse {
+  case class ClientError(reason: String) extends ErrorResponse {
     override def status: StatusCode = StatusCodes.BadRequest
   }
 
