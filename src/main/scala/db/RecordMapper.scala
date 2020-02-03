@@ -1,9 +1,9 @@
 package db {
 
   trait RecordMapper[Record, T] {
-    def fromRecord(record: Record): T
+    def from(record: Record): T
 
-    def toRecord(model: T): Record
+    def to(model: T): Record
   }
 
 }
