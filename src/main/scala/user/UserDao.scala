@@ -16,8 +16,12 @@ case class UserRecord(
                        createdAt: Date
                      )
 
-object UserDao {
-  def getUser(uid: Int): Option[UserRecord] = run(quote {
+trait UserDao {
+  def getUser(uid: Int): Option[UserRecord]
+}
+
+class QuillUserDao extends UserDao {
+  override def getUser(uid: Int): Option[UserRecord] = run(quote {
     querySchema[UserRecord]("user").filter(u => u.uid == lift(uid))
   }).headOption
 }

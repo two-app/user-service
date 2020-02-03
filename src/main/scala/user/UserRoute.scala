@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.Route
 import request.UserContext
 import response.ErrorResponse
 
-object UserRoute {
+class UserRoute(userService: UserService) {
   val route: Route = get {
     path("self") {
       extractRequest { request =>
@@ -22,7 +22,7 @@ object UserRoute {
       case Right(v) => v
     }
 
-    UserService.getUser(uid) match {
+    userService.getUser(uid) match {
       case Left(e: ErrorResponse) => complete(e.status, e)
       case Right(user: User) => complete(user)
     }
