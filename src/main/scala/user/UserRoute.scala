@@ -21,7 +21,7 @@ class UserRoute {
   }
 
   def getSelf(request: HttpRequest): Route = {
-    val uid: Int = UserContext(request).map(u => u.uid) match {
+    val uid: Int = UserContext.from(request).map(u => u.uid) match {
       case Left(e) => return respondWithError(e)
       case Right(v) => v
     }

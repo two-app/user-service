@@ -9,6 +9,14 @@ trait ErrorResponse {
 }
 
 object ErrorResponse {
+  case class AuthorizationError(reason: String) extends ErrorResponse {
+    override def status: StatusCode = StatusCodes.Unauthorized
+  }
+
+  case class InternalError(reason: String) extends ErrorResponse {
+    override def status: StatusCode = StatusCodes.InternalServerError
+  }
+
   case class InvalidDataError(reason: String) extends ErrorResponse {
     override def status: StatusCode = StatusCodes.BadRequest
   }
