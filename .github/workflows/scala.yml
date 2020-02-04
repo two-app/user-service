@@ -6,8 +6,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: remove mysql password
-        run: mysqladmin -u root -p'root' password ''
       - name: create users db
         run: mysql -uroot -e "CREATE DATABASE users;"
       - uses: actions/checkout@v2
@@ -17,5 +15,3 @@ jobs:
           java-version: 1.8
       - name: Run tests
         run: sbt --debug test
-#        env:
-#          DB_PASSWORD: root
