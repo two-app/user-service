@@ -8,6 +8,8 @@ jobs:
     steps:
       - name: Test Docker
         run: docker -v
+      - name: Start MySQL 8 Docker
+        run: docker run --name two-mysql -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -d mysql:latest
 #      - name: shutdown existing mysql
 #        run: sudo service mysql stop
 #      - name: remove mysql password
