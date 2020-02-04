@@ -1,4 +1,0 @@
-[0m[[0m[0mdebug[0m] [0m[0mCopy resource mappings: [0m
-[0m[[0m[0mdebug[0m] [0m[0m	(/Users/gerryfletch/two/scala/user-service/src/main/resources/migration/V2__Create_Users_Table.sql,/Users/gerryfletch/two/scala/user-service/target/scala-2.13/classes/migration/V2__Create_Users_Table.sql)[0m
-[0m[[0m[0mdebug[0m] [0m[0m	(/Users/gerryfletch/two/scala/user-service/src/main/resources/migration/V1__Create_Couples_Table.sql,/Users/gerryfletch/two/scala/user-service/target/scala-2.13/classes/migration/V1__Create_Couples_Table.sql)[0m
-[0m[[0m[0mdebug[0m] [0m[0m	(/Users/gerryfletch/two/scala/user-service/src/main/resources/migration/V0__Create_Schema.sql,/Users/gerryfletch/two/scala/user-service/target/scala-2.13/classes/migration/V0__Create_Schema.sql)[0m
