@@ -12,7 +12,7 @@ object FlywayHelper {
       val jdbcUrl: String = "jdbc:" + ConfigFactory.load().getString("ctx.url")
       flyway = Option(Flyway.configure()
         .locations("migration")
-        .dataSource(jdbcUrl, "root", "root")
+        .dataSource(jdbcUrl, "root", "")
         .load())
     }
 
