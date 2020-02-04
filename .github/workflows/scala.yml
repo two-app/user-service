@@ -6,8 +6,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: shutdown existing mysql
-        run: sudo service mysql stop
+      - name: Test Docker
+        run: docker -v
+#      - name: shutdown existing mysql
+#        run: sudo service mysql stop
 #      - name: remove mysql password
 #        run: mysqladmin -u root -p'root' password ''
 #      - name: create users db
@@ -17,22 +19,15 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
-      - name: Cache SBT ivy cache
-        uses: actions/cache@v1
-        with:
-          path: ~/.ivy2/cache
-          key: ${{ runner.os }}-sbt-ivy-cache-${{ hashFiles('**/build.sbt') }}
-      - name: Cache SBT
-        uses: actions/cache@v1
-        with:
-          path: ~/.sbt
-          key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt') }}
-      - name: Create MySQL 8 server
-        uses: mirromutth/mysql-action@v1.1
-        with:
-          mysql database: 'users'
-          mysql root password: 'root'
-      - name: remove mysql password
-        run: mysqladmin -u root -p'root' password ''
-      - name: Run tests
-        run: sbt --debug -Dctx.password=root test
+#      - name: Cache SBT ivy cache
+#        uses: actions/cache@v1
+#        with:
+#          path: ~/.ivy2/cache
+#          key: ${{ runner.os }}-sbt-ivy-cache-${{ hashFiles('**/build.sbt') }}
+#      - name: Cache SBT
+#        uses: actions/cache@v1
+#        with:
+#          path: ~/.sbt
+#          key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt') }}
+#      - name: Run tests
+#        run: sbt --debug -Dctx.password=root test
