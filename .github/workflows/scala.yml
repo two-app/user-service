@@ -6,12 +6,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Test Docker
-        run: docker -v
+      - name: shutdown existing mysql
+        run: sudo service mysql stop
       - name: Start MySQL 8 Docker
         run: docker run --name two-mysql -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -d mysql:latest
-#      - name: shutdown existing mysql
-#        run: sudo service mysql stop
 #      - name: remove mysql password
 #        run: mysqladmin -u root -p'root' password ''
 #      - name: create users db
@@ -21,6 +19,8 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
+      - name: Run tests
+        run: sbt --debug test
 #      - name: Cache SBT ivy cache
 #        uses: actions/cache@v1
 #        with:
