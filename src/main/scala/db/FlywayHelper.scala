@@ -8,8 +8,8 @@ object FlywayHelper {
   private var flyway: Option[Flyway] = None
 
   def getFlyway: Flyway = {
-    val jdbcUrl: String = "jdbc:" + ConfigFactory.load().getString("ctx.url")
     if (flyway.isEmpty) {
+      val jdbcUrl: String = "jdbc:" + ConfigFactory.load().getString("ctx.url")
       flyway = Option(Flyway.configure()
         .locations("migration")
         .dataSource(jdbcUrl, "root", "")
