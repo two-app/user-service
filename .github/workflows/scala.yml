@@ -31,5 +31,6 @@ jobs:
         uses: mirromutth/mysql-action@v1.1
         with:
           mysql database: 'users'
+          mysql root password: ''
       - name: Run tests
         run: sbt --debug test
