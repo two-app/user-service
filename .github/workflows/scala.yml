@@ -9,6 +9,8 @@ jobs:
     - uses: mirromutth/mysql-action@v1.1
       with:
         mysql database: users
+        mysql user: 'developer'
+        mysql password: 'twodeveloper'
     - uses: actions/checkout@v2
     - name: Set up JDK 1.8
       uses: actions/setup-java@v1
