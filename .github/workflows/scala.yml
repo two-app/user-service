@@ -32,5 +32,7 @@ jobs:
         with:
           mysql database: 'users'
           mysql root password: 'root'
+      - name: remove mysql password
+        run: mysqladmin -u root -p'root' password ''
       - name: Run tests
         run: sbt --debug -Dctx.password=root test
