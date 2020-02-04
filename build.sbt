@@ -4,22 +4,30 @@ version := "0.1"
 
 scalaVersion := "2.12.10"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-http"   % "10.1.11"
-libraryDependencies += "com.typesafe.akka" %% "akka-stream" % "2.5.26"
-libraryDependencies += "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.11"
+/** Akka */
+libraryDependencies ++= Seq(
+  "com.typesafe.akka" %% "akka-http" % "10.1.11",
+  "com.typesafe.akka" %% "akka-stream" % "2.5.26",
+  "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.11"
+)
 
-libraryDependencies += "com.typesafe.akka" %% "akka-stream-testkit" % "2.5.26"
-libraryDependencies += "com.typesafe.akka" %% "akka-http-testkit" % "10.1.11"
-
+/** Libs */
 libraryDependencies += "com.pauldijou" %% "jwt-core" % "4.2.0"
 
 /** Databases */
+libraryDependencies ++= Seq(
+  "org.flywaydb" % "flyway-core" % "6.2.1",
+  "mysql" % "mysql-connector-java" % "8.0.19",
+  "io.getquill" % "quill-async-mysql_2.12" % "3.5.0"
+)
 
-libraryDependencies += "mysql" % "mysql-connector-java" % "8.0.19"
-libraryDependencies += "io.getquill" % "quill-async-mysql_2.12" % "3.5.0"
-
-libraryDependencies += "org.scalactic" %% "scalactic" % "3.1.0"
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.0" % "test"
+/** Test */
+libraryDependencies ++= Seq(
+  "org.scalactic" %% "scalactic" % "3.1.0",
+  "org.scalatest" %% "scalatest" % "3.1.0" % "test",
+  "com.typesafe.akka" %% "akka-stream-testkit" % "2.5.26",
+  "com.typesafe.akka" %% "akka-http-testkit" % "10.1.11"
+)
 
 enablePlugins(FlywayPlugin)
 

@@ -21,12 +21,11 @@ trait UserService {
 
 class UserServiceImpl(userDao: UserDao) extends UserService {
   def getUser(uid: Int): Future[Either[ErrorResponse, User]] = {
-    userDao.getUser(uid).map {
-      case None => Left(NotFoundError(s"User with UID $uid does not exist."))
-      case Some(record) => UserRecordMapper.from(record)
-    }.map {
-      case Left(e: InvalidUserError) => Left(ClientError(s"User record malformed. Reason: ${e.reason}"))
-      case Right(v) => Right(v)
+    userDao.getUser(uid).map { maybeUser: Option[UserRecord] =>
+      for {
+        record <- maybeUser.toRight(NotFoundError(s"User with UID $uid does not exist."))
+        user <- UserRecordMapper.from(record).left.map(e => ClientError(s"User record malformed. Reason: ${e.reason}"))
+      } yield user
     }
   }
 }
