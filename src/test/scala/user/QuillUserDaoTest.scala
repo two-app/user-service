@@ -13,9 +13,7 @@ class QuillUserDaoTest extends AsyncFlatSpec with Matchers with BeforeAndAfterEa
   override def beforeEach(): Unit = {
     val flyway = FlywayHelper.getFlyway
     flyway.clean()
-    println("Flyway cleaned")
     flyway.migrate()
-    println("Flyway migrated")
   }
 
   "retrieving a newly created user" should "return the correct user" in {
@@ -24,8 +22,6 @@ class QuillUserDaoTest extends AsyncFlatSpec with Matchers with BeforeAndAfterEa
         lift(newUserRegistration(0))
       ).returningGenerated(_.uid)
     }
-
-    println("Quote created, running...")
 
     db.ctx.run(q).flatMap(uid => new QuillUserDao().getUser(uid)).map(record => {
       record.isDefined shouldBe true

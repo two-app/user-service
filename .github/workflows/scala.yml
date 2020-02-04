@@ -6,7 +6,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: shutdown existing mysql
+      - name: Shutdown Existing MySQL Service
         run: sudo service mysql stop
       - name: Start MySQL 8 Docker
         run: docker run --name two-mysql -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_DATABASE=users -d -p 3306:3306 mysql:latest
@@ -21,15 +21,13 @@ jobs:
         run: sbt --debug flywayMigrate
       - name: Run tests
         run: sbt --debug test
-#      - name: Cache SBT ivy cache
-#        uses: actions/cache@v1
-#        with:
-#          path: ~/.ivy2/cache
-#          key: ${{ runner.os }}-sbt-ivy-cache-${{ hashFiles('**/build.sbt') }}
-#      - name: Cache SBT
-#        uses: actions/cache@v1
-#        with:
-#          path: ~/.sbt
-#          key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt') }}
-#      - name: Run tests
-#        run: sbt --debug -Dctx.password=root test
+      - name: Cache SBT ivy cache
+        uses: actions/cache@v1
+        with:
+          path: ~/.ivy2/cache
+          key: ${{ runner.os }}-sbt-ivy-cache-${{ hashFiles('**/build.sbt') }}
+      - name: Cache SBT
+        uses: actions/cache@v1
+        with:
+          path: ~/.sbt
+          key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt') }}
