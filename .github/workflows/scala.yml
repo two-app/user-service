@@ -33,4 +33,4 @@ jobs:
           mysql database: 'users'
           mysql root password: 'root'
       - name: Run tests
-        run: sbt --debug test
+        run: sbt --debug -Dctx.password=root test
