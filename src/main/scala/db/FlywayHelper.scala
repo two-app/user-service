@@ -17,6 +17,7 @@ object FlywayHelper {
         .locations("migration")
         .dataSource(jdbcUrl, "root", password)
         .load())
+      println("Configured Flyway")
     }
 
     flyway.get
