@@ -2,23 +2,33 @@ package user
 
 import java.util.Date
 
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
 import db.ctx._
+import org.scalatest.BeforeAndAfterEach
+import org.scalatest.flatspec.AsyncFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class QuillUserDaoTest extends AnyFlatSpec with Matchers {
+class QuillUserDaoTest extends AsyncFlatSpec with Matchers with BeforeAndAfterEach {
 
-  import scala.concurrent.ExecutionContext.Implicits.{ global => ec }
+  override def beforeEach(): Unit = {
+    val flyway = db.getFlyway
+    flyway.clean()
+    flyway.migrate()
+  }
 
   "retrieving a newly created user" should "return the correct user" in {
     val q = quote {
       querySchema[UserRecord]("user").insert(
-        lift(UserRecord(0, None, None, "test@two.com", "First", "Last", acceptedTerms = true, ofAge = true, new Date()))
+        lift(newUserRegistration(0))
       ).returningGenerated(_.uid)
     }
 
     db.ctx.run(q).flatMap(uid => new QuillUserDao().getUser(uid)).map(record => {
       record.isDefined shouldBe true
+      record.get shouldEqual newUserRegistration(1, createdAt = record.get.createdAt)
     })
   }
+
+  def newUserRegistration(uid: Int, createdAt: Date = new Date()): UserRecord = UserRecord(
+    uid, None, None, "test@two.com", "First", "Last", acceptedTerms = true, ofAge = true, createdAt
+  )
 }

@@ -14,6 +14,7 @@ libraryDependencies += "com.typesafe.akka" %% "akka-http-testkit" % "10.1.11"
 libraryDependencies += "com.pauldijou" %% "jwt-core" % "4.2.0"
 
 /** Databases */
+libraryDependencies += "org.flywaydb" % "flyway-core" % "6.2.1"
 
 libraryDependencies += "mysql" % "mysql-connector-java" % "8.0.19"
 libraryDependencies += "io.getquill" % "quill-async-mysql_2.12" % "3.5.0"
