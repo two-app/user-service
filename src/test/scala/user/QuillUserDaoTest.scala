@@ -2,6 +2,7 @@ package user
 
 import java.util.Date
 
+import db.FlywayHelper
 import db.ctx._
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.flatspec.AsyncFlatSpec
@@ -10,7 +11,7 @@ import org.scalatest.matchers.should.Matchers
 class QuillUserDaoTest extends AsyncFlatSpec with Matchers with BeforeAndAfterEach {
 
   override def beforeEach(): Unit = {
-    val flyway = db.getFlyway
+    val flyway = FlywayHelper.getFlyway
     flyway.clean()
     flyway.migrate()
   }
