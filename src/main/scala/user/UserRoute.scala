@@ -22,7 +22,7 @@ class UserRoute(userService: UserService) {
       case Right(v) => v
     }
 
-    userService.getUser(uid) match {
+    onSuccess(userService.getUser(uid)) {
       case Left(e: ErrorResponse) => complete(e.status, e)
       case Right(user: User) => complete(user)
     }

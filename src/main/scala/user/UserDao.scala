@@ -4,6 +4,9 @@ import java.util.Date
 
 import db.ctx._
 
+import scala.concurrent.ExecutionContext.Implicits.{global => ec}
+import scala.concurrent.Future
+
 case class UserRecord(
                        uid: Int,
                        pid: Option[Int],
@@ -17,11 +20,11 @@ case class UserRecord(
                      )
 
 trait UserDao {
-  def getUser(uid: Int): Option[UserRecord]
+  def getUser(uid: Int): Future[Option[UserRecord]]
 }
 
 class QuillUserDao extends UserDao {
-  override def getUser(uid: Int): Option[UserRecord] = run(quote {
+  override def getUser(uid: Int): Future[Option[UserRecord]] = run(quote {
     querySchema[UserRecord]("user").filter(u => u.uid == lift(uid))
-  }).headOption
+  }).map(r => r.headOption)
 }
