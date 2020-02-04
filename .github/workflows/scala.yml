@@ -6,6 +6,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: remove mysql password
+        run: mysqladmin -u root -p'root' password ''
       - name: create users db
         run: mysql -uroot -e "CREATE DATABASE users;"
       - uses: actions/checkout@v2
