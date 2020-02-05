@@ -2,6 +2,7 @@ package user
 
 import java.util.Date
 
+import com.typesafe.scalalogging.Logger
 import db.ctx._
 
 import scala.concurrent.ExecutionContext.Implicits.{global => ec}
@@ -24,7 +25,13 @@ trait UserDao {
 }
 
 class QuillUserDao extends UserDao {
-  override def getUser(uid: Int): Future[Option[UserRecord]] = run(quote {
-    querySchema[UserRecord]("user").filter(u => u.uid == lift(uid))
-  }).map(r => r.headOption)
+  val logger: Logger = Logger(classOf[QuillUserDao])
+
+  override def getUser(uid: Int): Future[Option[UserRecord]] = {
+    logger.info(s"Retrieving user by UID $uid.")
+
+    run(quote {
+      querySchema[UserRecord]("user").filter(u => u.uid == lift(uid))
+    }).map(r => r.headOption)
+  }
 }
