@@ -1,7 +1,7 @@
 package user
 
 import spray.json.DefaultJsonProtocol.{jsonFormat3, _}
-import spray.json.RootJsonFormat
+import spray.json.{JsBoolean, JsString, JsValue, RootJsonFormat}
 
 final case class ModelValidationError(reason: String)
 
@@ -16,7 +16,26 @@ case class UserRegistration
 )
 
 object UserRegistration {
-  implicit val userRegistrationFormat: RootJsonFormat[UserRegistration] = jsonFormat6(UserRegistration.apply)
+
+  implicit object UserRegistrationFormat extends RootJsonFormat[Either[ModelValidationError, UserRegistration]] {
+    override def write(obj: Either[ModelValidationError, UserRegistration]): JsValue = null
+
+    override def read(json: JsValue): Either[ModelValidationError, UserRegistration] = {
+      val f = json.asJsObject.fields
+      UserRegistration.from(
+        firstName = extractString(f, "firstName"),
+        lastName = extractString(f, "lastName"),
+        email = extractString(f, "email"),
+        password = extractString(f, "password"),
+        acceptedTerms = extractBool(f, "acceptedTerms"),
+        ofAge = extractBool(f, "ofAge")
+      )
+    }
+
+    def extractString(f: Map[String, JsValue], k: String): String = f.getOrElse(k, JsString.empty).convertTo[String]
+
+    def extractBool(f: Map[String, JsValue], k: String): Boolean = f.getOrElse(k, JsBoolean(false)).convertTo[Boolean]
+  }
 
   def from(firstName: String, lastName: String, email: String, password: String, acceptedTerms: Boolean, ofAge: Boolean)
   : Either[ModelValidationError, UserRegistration] = {

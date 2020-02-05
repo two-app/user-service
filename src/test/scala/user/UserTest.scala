@@ -1,30 +1,70 @@
 package user
 
 import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class UserTest extends AnyFlatSpec {
+class UserRegistrationTest extends AnyFlatSpec with Matchers {
+  val validRegistration: UserRegistration = UserRegistration("First", "Last", "user@two.com", "Passw0rd", acceptedTerms = true, ofAge = true)
+
+  "an empty first name" should "return a validation error" in {
+    val errorOrRegistration = UserRegistration.from("", "", "", "", acceptedTerms = true, ofAge = true)
+    errorOrRegistration shouldBe Left(ModelValidationError("First name must be present."))
+  }
+
+  "an empty last name" should "return a validation error" in {
+    val errorOrRegistration = UserRegistration.from("First", "", "", "", acceptedTerms = true, ofAge = true)
+    errorOrRegistration shouldBe Left(ModelValidationError("Last name must be present."))
+  }
+
+  "an empty email" should "return a validation error" in {
+    val errorOrRegistration = UserRegistration.from("First", "Last", "", "", acceptedTerms = true, ofAge = true)
+    errorOrRegistration shouldBe Left(ModelValidationError("Email must be valid."))
+  }
+
+  "an invalid email" should "return a validation error" in {
+    val errorOrRegistration = UserRegistration.from("First", "Last", "bla", "", acceptedTerms = true, ofAge = true)
+    errorOrRegistration shouldBe Left(ModelValidationError("Email must be valid."))
+  }
+
+  "a short password" should "return a validation error" in {
+    val errorOrRegistration = UserRegistration.from("First", "Last", "user@two.com", "short", acceptedTerms = true, ofAge = true)
+    errorOrRegistration shouldBe Left(ModelValidationError("Password must be at least six characters in length."))
+  }
+
+  "unaccepted terms" should "return a validation error" in {
+    val errorOrRegistration = UserRegistration.from("First", "Last", "user@two.com", "validpassword", acceptedTerms = false, ofAge = true)
+    errorOrRegistration shouldBe Left(ModelValidationError("Terms and Conditions must be accepted."))
+  }
+
+  "unaccepted age requirement" should "return a validation error" in {
+    val errorOrRegistration = UserRegistration.from("First", "Last", "user@two.com", "validpassword", acceptedTerms = true, ofAge = false)
+    errorOrRegistration shouldBe Left(ModelValidationError("You must meet the age requirements."))
+  }
+}
+
+class UserTest extends AnyFlatSpec with Matchers{
 
   "A valid user" should "return the user" in {
-    assert(User.from(1, "First", "Last") == Right(User(1, "First", "Last")))
+    User.from(1, "First", "Last") shouldBe Right(User(1, "First", "Last"))
   }
 
-  "A UID of zero" should "return InvalidUserError" in {
-    assert(User.from(0, "Two", "Two") == Left(InvalidUserError("UID must be greater than zero.")))
+  "A UID of zero" should "return a validation error" in {
+    User.from(0, "Two", "Two") shouldBe Left(ModelValidationError("UID must be greater than zero."))
   }
 
-  "An empty First Name" should "return InvalidUserError" in {
-    assert(User.from(1, "", "Two") == Left(InvalidUserError("First name must be present.")))
+  "An empty First Name" should "return a validation error" in {
+    User.from(1, "", "Two") shouldBe Left(ModelValidationError("First name must be present."))
   }
 
-  "A null First Name" should "return InvalidUserError" in {
-    assert(User.from(1, null, "Two") == Left(InvalidUserError("First name must be present.")))
+  "A null First Name" should "return a validation error" in {
+    User.from(1, null, "Two") shouldBe Left(ModelValidationError("First name must be present."))
   }
 
-  "An empty Last Name" should "return InvalidUserError" in {
-    assert(User.from(1, "Two", "") == Left(InvalidUserError("Last name must be present.")))
+  "An empty Last Name" should "return a validation error" in {
+    User.from(1, "Two", "") shouldBe Left(ModelValidationError("Last name must be present."))
   }
 
-  "A null Last Name" should "return InvalidUserError" in {
-    assert(User.from(1, "Two", null) == Left(InvalidUserError("Last name must be present.")))
+  "A null Last Name" should "return a validation error" in {
+    User.from(1, "Two", null) shouldBe Left(ModelValidationError("Last name must be present."))
   }
 }
