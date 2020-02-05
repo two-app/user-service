@@ -9,12 +9,12 @@ import response.ErrorResponse.{ClientError, InternalError, NotFoundError}
 import scala.concurrent.ExecutionContext.Implicits.{global => ec}
 import scala.concurrent.Future
 
-object UserRecordMapper extends RecordMapper[UserRecord, Either[InvalidUserError, User]] {
-  override def from(record: UserRecord): Either[InvalidUserError, User] = {
+object UserRecordMapper extends RecordMapper[UserRecord, Either[ModelValidationError, User]] {
+  override def from(record: UserRecord): Either[ModelValidationError, User] = {
     User.from(record.uid, record.firstName, record.lastName)
   }
 
-  override def to(model: Either[InvalidUserError, User]): UserRecord = null
+  override def to(model: Either[ModelValidationError, User]): UserRecord = null
 }
 
 trait UserService {

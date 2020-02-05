@@ -16,7 +16,7 @@ class UserRecordMapperTest extends AnyFlatSpec with Matchers {
     val date = new Date()
     val record = UserRecord(1, Option(2), Option(3), "admin@two.com", "First", "Last", acceptedTerms = true, ofAge = true, date)
 
-    val user: Either[InvalidUserError, User] = UserRecordMapper.from(record)
+    val user: Either[ModelValidationError, User] = UserRecordMapper.from(record)
 
     user.isRight shouldBe true
 
