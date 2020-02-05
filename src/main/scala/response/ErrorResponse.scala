@@ -36,7 +36,7 @@ object ErrorResponse {
     override def status: StatusCode = StatusCodes.Unauthorized
   }
 
-  case class InternalError(reason: String) extends ErrorResponse {
+  case class InternalError(reason: String = "Something went wrong.") extends ErrorResponse {
     override def status: StatusCode = StatusCodes.InternalServerError
   }
 
