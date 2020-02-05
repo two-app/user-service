@@ -9,7 +9,6 @@ import db.ctx._
 
 import scala.concurrent.ExecutionContext.Implicits.{global => ec}
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
 
 case class UserRecord
 (
@@ -24,6 +23,12 @@ case class UserRecord
   createdAt: Date
 )
 
+object UserRecord {
+  def asInsertRecord(ur: UserRegistration): UserRecord = {
+    new UserRecord(0, None, None, ur.email, ur.firstName, ur.lastName, ur.acceptedTerms, ur.ofAge, new Date())
+  }
+}
+
 trait UserDao {
   def storeUser(ur: UserRegistration): Future[Either[DatabaseError, Int]]
 
@@ -35,17 +40,13 @@ class QuillUserDao extends UserDao {
 
   override def storeUser(ur: UserRegistration): Future[Either[DatabaseError, Int]] = {
     logger.info(s"Storing user.")
-    val newRecord = UserRecord(0, None, None, ur.email, ur.firstName, ur.lastName, ur.acceptedTerms, ur.ofAge, new Date())
-    val insert = quote {
-      querySchema[UserRecord]("user").insert(lift(newRecord)).returningGenerated(_.uid)
-    }
-
-    run(insert).map(Right(_)).recover {
+    run(quote {
+      querySchema[UserRecord]("user").insert(lift(UserRecord.asInsertRecord(ur))).returningGenerated(_.uid)
+    }).map(Right(_)).recover {
       case e: MySQLException => Left(DatabaseError.fromException(e))
-      case e: Exception => {
+      case e: Exception =>
         logger.error("Unknown Exception", e)
         Left(DatabaseError.Other())
-      }
     }
   }
 
