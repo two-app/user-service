@@ -6,7 +6,7 @@ import org.scalatest.BeforeAndAfterEach
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class QuillUserDaoTest extends AsyncFlatSpec with Matchers with BeforeAndAfterEach {
+class QuillUserDaoIntegrationTest extends AsyncFlatSpec with Matchers with BeforeAndAfterEach {
 
   val userDao: UserDao = new QuillUserDao
 

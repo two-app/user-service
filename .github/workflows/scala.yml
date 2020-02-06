@@ -32,4 +32,4 @@ jobs:
       - name: Migrate Database
         run: sbt --debug flywayMigrate
       - name: Run tests
-        run: sbt --debug test
+        run: sbt --info test

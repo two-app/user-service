@@ -38,3 +38,5 @@ flywayUser := "root"
 flywayPassword := ""
 flywayLocations += "migration"
 flywaySchemas += "users"
+
+parallelExecution in IntegrationTest := false
