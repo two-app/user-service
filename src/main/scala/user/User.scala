@@ -2,6 +2,7 @@ package user
 
 import spray.json.DefaultJsonProtocol.{jsonFormat3, _}
 import spray.json.{JsBoolean, JsString, JsValue, RootJsonFormat}
+import spray.json._
 
 final case class ModelValidationError(reason: String)
 
@@ -18,7 +19,10 @@ case class UserRegistration
 object UserRegistration {
 
   implicit object UserRegistrationFormat extends RootJsonFormat[Either[ModelValidationError, UserRegistration]] {
-    override def write(obj: Either[ModelValidationError, UserRegistration]): JsValue = null
+    override def write(obj: Either[ModelValidationError, UserRegistration]): JsValue = obj match {
+      case Left(_) => null
+      case Right(ur) => ur.toJson(jsonFormat6(UserRegistration.apply))
+    }
 
     override def read(json: JsValue): Either[ModelValidationError, UserRegistration] = {
       val f = json.asJsObject.fields
