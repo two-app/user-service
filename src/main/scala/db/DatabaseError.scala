@@ -11,8 +11,7 @@ object DatabaseError {
     }
   }
 
-  case class Other() extends DatabaseError
+  final case class Other() extends DatabaseError
 
-  case class DuplicateEntry() extends DatabaseError
-
+  final case class DuplicateEntry() extends DatabaseError
 }

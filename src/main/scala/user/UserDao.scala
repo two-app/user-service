@@ -10,7 +10,7 @@ import db.ctx._
 import scala.concurrent.ExecutionContext.Implicits.{global => ec}
 import scala.concurrent.Future
 
-case class UserRecord
+final case class UserRecord
 (
   uid: Int,
   pid: Option[Int],

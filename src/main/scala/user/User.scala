@@ -6,7 +6,7 @@ import spray.json._
 
 final case class ModelValidationError(reason: String)
 
-case class UserRegistration
+final case class UserRegistration
 (
   firstName: String,
   lastName: String,

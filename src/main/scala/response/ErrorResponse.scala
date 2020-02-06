@@ -32,19 +32,19 @@ object ErrorResponse {
     )
   }
 
-  case class AuthorizationError(reason: String) extends ErrorResponse {
+  final case class AuthorizationError(reason: String) extends ErrorResponse {
     override def status: StatusCode = StatusCodes.Unauthorized
   }
 
-  case class InternalError(reason: String = "Something went wrong.") extends ErrorResponse {
+  final case class InternalError(reason: String = "Something went wrong.") extends ErrorResponse {
     override def status: StatusCode = StatusCodes.InternalServerError
   }
 
-  case class ClientError(reason: String) extends ErrorResponse {
+  final case class ClientError(reason: String) extends ErrorResponse {
     override def status: StatusCode = StatusCodes.BadRequest
   }
 
-  case class NotFoundError(reason: String) extends ErrorResponse {
+  final case class NotFoundError(reason: String) extends ErrorResponse {
     override def status: StatusCode = StatusCodes.NotFound
   }
 
