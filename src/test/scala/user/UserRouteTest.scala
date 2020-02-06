@@ -11,7 +11,7 @@ import pdi.jwt.{Jwt, JwtClaim}
 
 import scala.util.Random
 
-class UserRouteIntegrationTest extends AnyFlatSpec with Matchers with ScalaFutures with ScalatestRouteTest {
+class UserRouteTest extends AnyFlatSpec with Matchers with ScalaFutures with ScalatestRouteTest {
 
   val route: Route = new UserRoute(new UserServiceImpl(new QuillUserDao())).route
 
