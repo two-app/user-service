@@ -63,20 +63,6 @@ class UserRouteTest extends AnyFlatSpec with Matchers with ScalaFutures with Sca
     }
   }
 
-  // TODO reimplement this test when createUser is done
-  //  val ValidTokenReq: HttpRequest = HttpRequest(uri = "/self", headers = List(RawHeader("Authorization", s"Bearer ${jwt()}")))
-  //
-  //  "GET /self with a valid token" should "return the user" in {
-  //    registerUser("testUser@two.com") ~> route ~> check {
-  //      response.status shouldEqual StatusCodes.OK
-  //    }
-  //
-  //    ValidTokenReq ~> route ~> check {
-  //      response.status shouldEqual StatusCodes.OK
-  //      responseAs[String] shouldEqual """{"firstName":"Gerry","lastName":"Fletcher","uid":1}"""
-  //    }
-  //  }
-
   def registerUser(email: String): HttpRequest = {
     val userRegistration = s"""{"firstName": "first", "lastName": "last", "email": "$email", "password": "strongpass", "acceptedTerms": true, "ofAge": true}"""
     Post("/self").withEntity(ContentTypes.`application/json`, userRegistration)
