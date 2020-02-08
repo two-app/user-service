@@ -22,9 +22,8 @@ object UserContext {
     }
   }
 
-  def from(request: HttpRequest): Either[ErrorResponse, UserContext] = extractToken(request) match {
-    case Left(e) => Left(e)
-    case Right(token) => this.from(token)
+  def from(request: HttpRequest): Either[ErrorResponse, UserContext] = {
+    extractToken(request).flatMap(token => this.from(token))
   }
 
   private def extractToken(request: HttpRequest): Either[AuthorizationError, String] = {
