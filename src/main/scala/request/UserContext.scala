@@ -7,8 +7,6 @@ import response.ErrorResponse.AuthorizationError
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 
-import scala.util.{Failure, Success}
-
 case class UserContext(uid: Int, pid: Option[Int], cid: Option[Int], connectCode: Option[String])
 
 object UserContext {
@@ -16,10 +14,9 @@ object UserContext {
   implicit val f: RootJsonFormat[UserContext] = jsonFormat4(UserContext.apply)
 
   def from(accessToken: String): Either[ErrorResponse, UserContext] = {
-    Jwt.decode(accessToken, JwtOptions(signature = false, expiration = false, notBefore = false)) match {
-      case Failure(_) => Left(AuthorizationError("Invalid token format."))
-      case Success(v) => Right(v.content.parseJson.convertTo[UserContext])
-    }
+    Jwt.decode(accessToken, JwtOptions(signature = false, expiration = false, notBefore = false))
+      .map(claim => claim.content.parseJson.convertTo[UserContext])
+      .toOption.toRight(AuthorizationError("Invalid token format."))
   }
 
   def from(request: HttpRequest): Either[ErrorResponse, UserContext] = {
