@@ -16,6 +16,9 @@ import scala.concurrent.Future
 case class Credentials(uid: Int, password: String)
 
 case class Tokens(accessToken: String, refreshToken: String)
+object Tokens {
+  implicit val TokensFormat: RootJsonFormat[Tokens] = jsonFormat2(Tokens.apply)
+}
 
 trait AuthenticationDao {
   def storeCredentials(uid: Int, password: String): Future[Tokens]
@@ -23,7 +26,6 @@ trait AuthenticationDao {
 
 class AuthenticationServiceDao extends AuthenticationDao {
   implicit val CredentialsFormat: RootJsonFormat[Credentials] = jsonFormat2(Credentials)
-  implicit val TokensFormat: RootJsonFormat[Tokens] = jsonFormat2(Tokens)
   implicit val system: ActorSystem = ActorSystem()
   implicit val materialise: ActorMaterializer = ActorMaterializer()
 

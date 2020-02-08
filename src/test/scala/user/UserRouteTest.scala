@@ -1,20 +1,30 @@
 package user
 
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.model.{ContentTypes, HttpRequest, StatusCodes}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import authentication.AuthenticationServiceDao
+import akka.http.scaladsl.unmarshalling.Unmarshal
+import authentication.{AuthenticationDao, Tokens}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import pdi.jwt.{Jwt, JwtClaim}
+import request.UserContext
 
+import scala.concurrent.Future
 import scala.util.Random
 
 class UserRouteTest extends AnyFlatSpec with Matchers with ScalaFutures with ScalatestRouteTest {
 
-  val route: Route = new UserRoute(new UserServiceImpl(new QuillUserDao(), new AuthenticationServiceDao())).route
+  class AuthDaoStub extends AuthenticationDao {
+    override def storeCredentials(uid: Int, password: String): Future[Tokens] = Future.successful(
+      Tokens("testAccess", "testRefresh")
+    )
+  }
+
+  val route: Route = new UserRoute(new UserServiceImpl(new QuillUserDao(), new AuthDaoStub())).route
 
   def jwt(uid: Int = 1): String = Jwt.encode(claim = JwtClaim(content = s"""{"uid": $uid, "pid": 2, "cid": 3}"""))
 
@@ -37,19 +47,26 @@ class UserRouteTest extends AnyFlatSpec with Matchers with ScalaFutures with Sca
   "GET /self with a valid user" should "return the user details" in {
     registerUser(randomEmail()) ~> route ~> check {
       response.status shouldEqual StatusCodes.OK
-      val uid = entityAs[String].toInt
-      val getSelf = HttpRequest(uri = "/self", headers = List(RawHeader("Authorization", s"Bearer ${jwt(uid)}")))
-      getSelf ~> route ~> check {
-        response.status shouldEqual StatusCodes.OK
-        entityAs[String] shouldEqual s"""{"firstName":"first","lastName":"last","uid":$uid}"""
-      }
+      Unmarshal(response).to[Tokens].map(t => t.accessToken).map(accessToken => {
+        val getSelf = HttpRequest(uri = "/self", headers = List(RawHeader("Authorization", s"Bearer $accessToken")))
+        val uid = UserContext.from(accessToken).right.get.uid
+        getSelf ~> route ~> check {
+          response.status shouldEqual StatusCodes.OK
+          entityAs[String] shouldEqual s"""{"firstName":"first","lastName":"last","uid":$uid}"""
+        }
+      })
     }
   }
 
   "POST /self with a valid user" should "return a generated UID" in {
     registerUser(randomEmail()) ~> route ~> check {
       response.status shouldEqual StatusCodes.OK
-      entityAs[String].toInt should be > 0
+      Unmarshal(response).to[Tokens].map(t => t.accessToken).map(at => UserContext.from(at).right.get).map(c => {
+        c.uid should be > 0
+        c.pid shouldBe None
+        c.cid shouldBe None
+        c.connectCode.isDefined shouldBe true
+      })
     }
   }
 

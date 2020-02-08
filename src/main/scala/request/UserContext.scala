@@ -15,18 +15,22 @@ object UserContext {
 
   implicit val f: RootJsonFormat[UserContext] = jsonFormat4(UserContext.apply)
 
+  def from(accessToken: String): Either[ErrorResponse, UserContext] = {
+    val jwt: JwtClaim = Jwt.decode(accessToken, JwtOptions(signature = false, expiration = false, notBefore = false)) match {
+      case Failure(_) => return Left(AuthorizationError("Invalid token format."))
+      case Success(v) => v
+    }
+
+    Right(jwt.content.parseJson.convertTo[UserContext])
+  }
+
   def from(request: HttpRequest): Either[ErrorResponse, UserContext] = {
     val token: String = extractToken(request) match {
       case Left(e) => return Left(e)
       case Right(token) => token
     }
 
-    val jwt: JwtClaim = Jwt.decode(token, JwtOptions(signature = false, expiration = false, notBefore = false)) match {
-      case Failure(_) => return Left(AuthorizationError("Invalid token format."))
-      case Success(v) => v
-    }
-
-    Right(jwt.content.parseJson.convertTo[UserContext])
+    this.from(token)
   }
 
   private def extractToken(request: HttpRequest): Either[AuthorizationError, String] = {
