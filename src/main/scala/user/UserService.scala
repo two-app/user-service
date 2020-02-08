@@ -1,8 +1,9 @@
 package user
 
+import authentication.{AuthenticationDao, Tokens}
 import com.typesafe.scalalogging.Logger
 import db.DatabaseError.{DuplicateEntry, Other}
-import db.{DatabaseError, RecordMapper}
+import db.RecordMapper
 import response.ErrorResponse
 import response.ErrorResponse.{ClientError, InternalError, NotFoundError}
 
@@ -18,26 +19,25 @@ object UserRecordMapper extends RecordMapper[UserRecord, Either[ModelValidationE
 }
 
 trait UserService {
-  def registerUser(ur: UserRegistration): Future[Either[ErrorResponse, Int]]
+  def registerUser(ur: UserRegistration): Future[Either[ErrorResponse, Tokens]]
 
   def getUser(uid: Int): Future[Either[ErrorResponse, User]]
 }
 
-class UserServiceImpl(userDao: UserDao) extends UserService {
+class UserServiceImpl(userDao: UserDao, authDao: AuthenticationDao) extends UserService {
   val logger: Logger = Logger(classOf[UserService])
 
-  override def registerUser(ur: UserRegistration): Future[Either[ErrorResponse, Int]] = {
+  override def registerUser(ur: UserRegistration): Future[Either[ErrorResponse, Tokens]] = {
     logger.info(s"Registering user with email '${ur.email}'.'")
-    userDao.storeUser(ur).map { errorOrUid: Either[DatabaseError, Int] =>
-      errorOrUid.left.map {
-        case _: DuplicateEntry => ClientError("An account with this email exists.")
-        case _: Other => InternalError()
-      }
+    userDao.storeUser(ur).flatMap {
+      case Left(_: DuplicateEntry) => Future.successful(Left(ClientError("An account with this email exists.")))
+      case Left(_: Other) => Future.successful(Left(InternalError()))
+      case Right(uid: Int) => authDao.storeCredentials(uid, ur.password).map(t => Right(t))
     }
   }
 
   override def getUser(uid: Int): Future[Either[ErrorResponse, User]] = {
-    logger.info(s"Retrieving user with UID ${uid}.")
+    logger.info(s"Retrieving user with UID $uid.")
     userDao.getUser(uid).map { maybeUser: Option[UserRecord] =>
       for {
         record <- maybeUser.toRight(NotFoundError(s"User with UID $uid does not exist."))

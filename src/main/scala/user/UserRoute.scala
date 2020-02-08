@@ -4,6 +4,7 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.model.{HttpRequest, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import authentication.Tokens
 import com.typesafe.scalalogging.Logger
 import request.UserContext
 import response.ErrorResponse
@@ -43,22 +44,19 @@ class UserRoute(userService: UserService) {
     logger.info("Registering user: {firstName: ${ur.firstName}, lastName: ${ur.lastName}, email: ${ur.email}}")
     onSuccess(userService.registerUser(ur)) {
       case Left(e: ErrorResponse) => complete(e.status, e)
-      case Right(uid: Int) => complete(uid.toString)
+      case Right(tokens: Tokens) => complete(tokens.toString)
     }
   }
 
   def getSelf(request: HttpRequest): Route = {
     logger.info("GET /self")
-    val uid: Int = UserContext.from(request).map(u => u.uid) match {
-      case Left(e) => return complete(e.status, e)
-      case Right(v) => v
-    }
-
-    logger.info(s"Extracted requesting user ID $uid.")
-    onSuccess(userService.getUser(uid)) {
-      case Left(_: NotFoundError) => complete(StatusCodes.InternalServerError)
-      case Left(e: ErrorResponse) => complete(e.status, e)
-      case Right(user: User) => complete(user)
-    }
+    UserContext.from(request).map(u => u.uid).fold(
+      e => complete(e.status, e),
+      uid => onSuccess(userService.getUser(uid)) {
+        case Left(_: NotFoundError) => complete(StatusCodes.InternalServerError)
+        case Left(e: ErrorResponse) => complete(e.status, e)
+        case Right(user: User) => complete(user)
+      }
+    )
   }
 }
