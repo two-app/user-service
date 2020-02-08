@@ -9,10 +9,12 @@ object FlywayHelper {
 
   def getFlyway: Flyway = {
     if (flyway.isEmpty) {
-      val jdbcUrl: String = "jdbc:" + ConfigFactory.load().getString("ctx.url")
+      val dbUrl: String = ConfigFactory.load().getString("db.flywayUrl")
+      val schema: String = ConfigFactory.load().getString("db.schema")
       flyway = Option(Flyway.configure()
         .locations("migration")
-        .dataSource(jdbcUrl, "root", "")
+        .schemas(schema)
+        .dataSource(dbUrl, "root", "")
         .load())
     }
 

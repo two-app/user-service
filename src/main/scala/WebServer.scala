@@ -1,5 +1,5 @@
 import akka.http.scaladsl.server.{HttpApp, Route}
-import user.{QuillUserDao, UserDao, UserRoute, UserService, UserServiceImpl}
+import user.{QuillUserDao, UserRoute, UserServiceImpl}
 
 object Server extends HttpApp {
   override protected def routes: Route = new UserRoute(new UserServiceImpl(new QuillUserDao())).route
