@@ -4,6 +4,7 @@ import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.model.{ContentTypes, HttpRequest, StatusCodes}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import authentication.AuthenticationServiceDao
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -13,7 +14,7 @@ import scala.util.Random
 
 class UserRouteTest extends AnyFlatSpec with Matchers with ScalaFutures with ScalatestRouteTest {
 
-  val route: Route = new UserRoute(new UserServiceImpl(new QuillUserDao())).route
+  val route: Route = new UserRoute(new UserServiceImpl(new QuillUserDao(), new AuthenticationServiceDao())).route
 
   def jwt(uid: Int = 1): String = Jwt.encode(claim = JwtClaim(content = s"""{"uid": $uid, "pid": 2, "cid": 3}"""))
 
