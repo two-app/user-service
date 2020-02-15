@@ -1,0 +1,5 @@
+package partner
+
+class PartnerRoute {
+
+}
