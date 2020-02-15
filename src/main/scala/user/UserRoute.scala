@@ -33,7 +33,6 @@ class UserRoute(userService: UserService) {
     logger.info("POST /self")
     entity(as[Either[ModelValidationError, UserRegistration]]) {
       case Left(e) =>
-        logger.info(s"User Registration validation failed: ${e.reason}")
         val clientError: ErrorResponse = ClientError(e.reason)
         complete(clientError.status, clientError)
       case Right(userRegistration) => registerUser(userRegistration)
@@ -41,10 +40,10 @@ class UserRoute(userService: UserService) {
   }
 
   def registerUser(ur: UserRegistration): Route = {
-    logger.info("Registering user: {firstName: ${ur.firstName}, lastName: ${ur.lastName}, email: ${ur.email}}")
+    logger.info(f"Registering user: {firstName: ${ur.firstName}, lastName: ${ur.lastName}, email: ${ur.email}}")
     onSuccess(userService.registerUser(ur)) {
       case Left(e: ErrorResponse) => complete(e.status, e)
-      case Right(tokens: Tokens) => complete(tokens.toString)
+      case Right(tokens: Tokens) => complete(tokens)
     }
   }
 

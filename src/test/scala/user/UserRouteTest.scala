@@ -8,7 +8,7 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import authentication.{AuthenticationDao, Tokens}
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import pdi.jwt.{Jwt, JwtClaim}
 import request.UserContext
@@ -16,17 +16,19 @@ import request.UserContext
 import scala.concurrent.Future
 import scala.util.Random
 
-class UserRouteTest extends AnyFlatSpec with Matchers with ScalaFutures with ScalatestRouteTest {
+class UserRouteTest extends AsyncFlatSpec with Matchers with ScalaFutures with ScalatestRouteTest {
 
   class AuthDaoStub extends AuthenticationDao {
     override def storeCredentials(uid: Int, password: String): Future[Tokens] = Future.successful(
-      Tokens("testAccess", "testRefresh")
+      Tokens(jwt(uid, "testConnectCode"), "testRefresh")
     )
   }
 
-  val route: Route = new UserRoute(new UserServiceImpl(new QuillUserDao(), new AuthDaoStub())).route
+  def jwt(uid: Int, connectCode: String): String = Jwt.encode(
+    claim = JwtClaim(content = s"""{"uid": $uid, "connectCode": "$connectCode"}""")
+  )
 
-  def jwt(uid: Int = 1): String = Jwt.encode(claim = JwtClaim(content = s"""{"uid": $uid, "pid": 2, "cid": 3}"""))
+  val route: Route = new UserRoute(new UserServiceImpl(new QuillUserDao(), new AuthDaoStub())).route
 
   "GET /self without a token" should "return unauthorized" in {
     Get("/self") ~> route ~> check {
@@ -66,6 +68,7 @@ class UserRouteTest extends AnyFlatSpec with Matchers with ScalaFutures with Sca
         c.pid shouldBe None
         c.cid shouldBe None
         c.connectCode.isDefined shouldBe true
+        c.connectCode.get shouldBe "testConnectCode"
       })
     }
   }
