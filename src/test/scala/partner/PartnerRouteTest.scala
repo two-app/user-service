@@ -11,6 +11,7 @@ import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import pdi.jwt.{Jwt, JwtClaim}
 import response.ErrorResponse
+import response.ErrorResponse.ClientError
 
 class PartnerRouteTest extends AsyncFlatSpec with Matchers with ScalaFutures with ScalatestRouteTest {
   def jwt(uid: Int, pid: Int, cid: Int): String = Jwt.encode(
@@ -21,12 +22,11 @@ class PartnerRouteTest extends AsyncFlatSpec with Matchers with ScalaFutures wit
 
   "POST /partner/xyz" should "return bad request for an already connected user" in {
     val header = RawHeader("Authorization", s"Bearer ${jwt(1, 2, 3)}")
-    println(header)
     val req: HttpRequest = HttpRequest(HttpMethods.POST, "/partner/xyz", headers = List(header))
     req ~> route ~> check {
       status shouldBe StatusCodes.BadRequest
       Unmarshal(response).to[ErrorResponse].map(er => {
-        er.reason shouldBe "User already has a partner."
+        er shouldBe ClientError("User already has a partner.")
       })
     }
   }
