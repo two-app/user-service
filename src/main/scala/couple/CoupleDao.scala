@@ -2,6 +2,7 @@ package couple
 
 import com.typesafe.scalalogging.Logger
 import db.ctx._
+import user.UserRecord
 
 import scala.concurrent.ExecutionContext.Implicits.{global => ec}
 import scala.concurrent.Future
@@ -16,6 +17,8 @@ trait CoupleDao {
   def storeCouple(uid: Int, pid: Int): Future[Int]
 
   def getCouple(cid: Int): Future[Option[CoupleRecord]]
+
+  def connectUserToPartner(uid: Int, pid: Int, cid: Int): Future[Unit]
 }
 
 class QuillCoupleDao extends CoupleDao {
@@ -33,5 +36,14 @@ class QuillCoupleDao extends CoupleDao {
     run(quote {
       querySchema[CoupleRecord]("couple").filter(_.cid == lift(cid))
     }).map(r => r.headOption)
+  }
+
+  override def connectUserToPartner(uid: Int, pid: Int, cid: Int): Future[Unit] = {
+    logger.info(s"Connecting UID $uid to PID $pid.")
+    run(quote {
+      querySchema[UserRecord]("user")
+        .filter(_.uid == lift(uid))
+        .update(_.pid -> lift(Option(pid)), _.cid -> lift(Option(cid)))
+    }).map(_ => ())
   }
 }
