@@ -1,13 +1,8 @@
 import akka.http.scaladsl.server.{HttpApp, Route}
-import authentication.AuthenticationServiceDao
-import partner.PartnerRoute
-import user.{QuillUserDao, UserRoute, UserServiceImpl}
+import config.MasterRoute._
 
 object Server extends HttpApp {
-  override protected def routes: Route = userRoute  ~ partnerRoute
-
-  val userRoute: Route = new UserRoute(new UserServiceImpl(new QuillUserDao(), new AuthenticationServiceDao())).route
-  val partnerRoute: Route = new PartnerRoute().route
+  override protected def routes: Route = userRoute ~ partnerRoute
 }
 
 object WebServer {
