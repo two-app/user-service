@@ -45,26 +45,26 @@ class UserRegistrationTest extends AnyFlatSpec with Matchers {
 class UserTest extends AnyFlatSpec with Matchers{
 
   "A valid user" should "return the user" in {
-    User.from(1, "First", "Last") shouldBe Right(User(1, "First", "Last"))
+    User.from(1, Option(2), Option(3), "First", "Last") shouldBe Right(User(1, Option(2), Option(3), "First", "Last"))
   }
 
   "A UID of zero" should "return a validation error" in {
-    User.from(0, "Two", "Two") shouldBe Left(ModelValidationError("UID must be greater than zero."))
+    User.from(0, None, None, "Two", "Two") shouldBe Left(ModelValidationError("UID must be greater than zero."))
   }
 
   "An empty First Name" should "return a validation error" in {
-    User.from(1, "", "Two") shouldBe Left(ModelValidationError("First name must be present."))
+    User.from(1, None, None, "", "Two") shouldBe Left(ModelValidationError("First name must be present."))
   }
 
   "A null First Name" should "return a validation error" in {
-    User.from(1, null, "Two") shouldBe Left(ModelValidationError("First name must be present."))
+    User.from(1, None, None, null, "Two") shouldBe Left(ModelValidationError("First name must be present."))
   }
 
   "An empty Last Name" should "return a validation error" in {
-    User.from(1, "Two", "") shouldBe Left(ModelValidationError("Last name must be present."))
+    User.from(1, None, None, "Two", "") shouldBe Left(ModelValidationError("Last name must be present."))
   }
 
   "A null Last Name" should "return a validation error" in {
-    User.from(1, "Two", null) shouldBe Left(ModelValidationError("Last name must be present."))
+    User.from(1, None, None, "Two", null) shouldBe Left(ModelValidationError("Last name must be present."))
   }
 }

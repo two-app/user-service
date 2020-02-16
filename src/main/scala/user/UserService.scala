@@ -12,7 +12,7 @@ import scala.concurrent.Future
 
 object UserRecordMapper extends RecordMapper[UserRecord, Either[ModelValidationError, User]] {
   override def from(record: UserRecord): Either[ModelValidationError, User] = {
-    User.from(record.uid, record.firstName, record.lastName)
+    User.from(record.uid, record.pid, record.cid, record.firstName, record.lastName)
   }
 
   override def to(model: Either[ModelValidationError, User]): UserRecord = null
