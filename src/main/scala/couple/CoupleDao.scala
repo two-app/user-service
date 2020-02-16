@@ -1,0 +1,5 @@
+package couple
+
+class CoupleDao {
+
+}
