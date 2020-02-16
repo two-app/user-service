@@ -67,8 +67,6 @@ class UserRouteTest extends AsyncFlatSpec with Matchers with ScalaFutures with S
         c.uid should be > 0
         c.pid shouldBe None
         c.cid shouldBe None
-        c.connectCode.isDefined shouldBe true
-        c.connectCode.get shouldBe "testConnectCode"
       })
     }
   }
