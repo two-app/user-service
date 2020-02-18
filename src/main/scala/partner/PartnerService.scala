@@ -1,6 +1,7 @@
 package partner
 
 import authentication.{AuthenticationDao, Tokens}
+import com.typesafe.scalalogging.Logger
 import couple.CoupleDao
 import response.ErrorResponse
 import response.ErrorResponse.ClientError
@@ -14,7 +15,10 @@ trait PartnerService {
 }
 
 class PartnerServiceImpl(userService: UserService, coupleDao: CoupleDao, authDao: AuthenticationDao) extends PartnerService {
+  val logger: Logger = Logger(classOf[PartnerService])
+
   override def connectUsers(uid: Int, pid: Int): Future[Either[ErrorResponse, Tokens]] = {
+    logger.info(s"Connecting users $uid and $pid.")
     userService.getUser(uid)
       .map(errorOrUser => errorOrUser.filterOrElse(u => u.pid.isEmpty, ClientError("User already has a partner.")))
       .flatMap(_ => userService.getUser(pid))
