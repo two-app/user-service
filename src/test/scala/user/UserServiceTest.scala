@@ -56,6 +56,8 @@ class UserServiceTest extends AnyFlatSpec with Matchers with BeforeAndAfterEach 
     var storeCredentialsResponse: Future[Tokens] = _
 
     override def storeCredentials(uid: Int, password: String): Future[Tokens] = storeCredentialsResponse
+
+    override def createTokens(uid: Int, pid: Option[Int], cid: Option[Int]): Future[Tokens] = ???
   }
 
   var userDao: UserDaoStub = _

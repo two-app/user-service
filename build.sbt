@@ -42,3 +42,6 @@ flywaySchemas += "users"
 
 parallelExecution in IntegrationTest := false
 parallelExecution in Test := false
+
+scalacOptions += "-Ypartial-unification"
+libraryDependencies += "org.typelevel" %% "cats-core" % "2.0.0"

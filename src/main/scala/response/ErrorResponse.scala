@@ -23,6 +23,7 @@ object ErrorResponse {
         case StatusCodes.InternalServerError => InternalError(reason)
         case StatusCodes.BadRequest => ClientError(reason)
         case StatusCodes.NotFound => NotFoundError(reason)
+        case _ => InternalError(reason)
       }
     }
 
