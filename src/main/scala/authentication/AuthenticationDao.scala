@@ -16,12 +16,15 @@ import scala.concurrent.Future
 case class Credentials(uid: Int, password: String)
 
 case class Tokens(accessToken: String, refreshToken: String)
+
 object Tokens {
   implicit val TokensFormat: RootJsonFormat[Tokens] = jsonFormat2(Tokens.apply)
 }
 
 trait AuthenticationDao {
   def storeCredentials(uid: Int, password: String): Future[Tokens]
+
+  def createTokens(uid: Int, pid: Option[Int], cid: Option[Int]): Future[Tokens]
 }
 
 class AuthenticationServiceDao extends AuthenticationDao {
@@ -35,6 +38,18 @@ class AuthenticationServiceDao extends AuthenticationDao {
       method = HttpMethods.POST,
       uri = Config.getProperty("service.authentication.location") + "/credentials",
       entity = HttpEntity(ContentTypes.`application/json`, credentials.toJson.compactPrint)
+    )
+
+    Http().singleRequest(request).flatMap(r => Unmarshal(r).to[Tokens])
+  }
+
+  override def createTokens(uid: Int, pid: Option[Int], cid: Option[Int]): Future[Tokens] = {
+    case class TokenRequest(uid: Int, pid: Option[Int], cid: Option[Int])
+    implicit val f: RootJsonFormat[TokenRequest] = jsonFormat3(TokenRequest)
+    val request = HttpRequest(
+      method = HttpMethods.POST,
+      uri = Config.getProperty("service.authentication.location") + "/tokens",
+      entity = HttpEntity(ContentTypes.`application/json`, TokenRequest(uid, pid, cid).toJson.compactPrint)
     )
 
     Http().singleRequest(request).flatMap(r => Unmarshal(r).to[Tokens])
