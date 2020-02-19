@@ -47,7 +47,7 @@ class PartnerRouteTest extends AsyncFlatSpec with Matchers with ScalaFutures wit
   }
 
   "POST /partner/xyz for an already connected user token" should "return bad request" in {
-    val route = new TestBed().build()
+    val route = new TestBed().onConnectUsersFail().build()
     val header = authHeader(jwt(1, 2, 3))
     val req: HttpRequest = HttpRequest(HttpMethods.POST, s"/partner/$userTwoConnectCode", headers = List(header))
     req ~> route ~> check {
@@ -59,7 +59,7 @@ class PartnerRouteTest extends AsyncFlatSpec with Matchers with ScalaFutures wit
   }
 
   "POST /partner/xyz with the same connect code as requesting user" should "return bad request" in {
-    val route = new TestBed().build()
+    val route = new TestBed().onConnectUsersFail().build()
     val header = authHeader(unconnectedJwt(1, userOneConnectCode))
     val req = HttpRequest(HttpMethods.POST, s"/partner/$userOneConnectCode", headers = List(header))
     req ~> route ~> check {
@@ -87,6 +87,11 @@ class PartnerRouteTest extends AsyncFlatSpec with Matchers with ScalaFutures wit
 
     def onConnectUsers(errorOrTokens: Either[ErrorResponse, Tokens]): TestBed = {
       partnerServiceStub = (_, _) => EitherT.fromEither[Future](errorOrTokens)
+      this
+    }
+
+    def onConnectUsersFail(): TestBed = {
+      partnerServiceStub = (_, _) => fail("Expected partner service not to be called.")
       this
     }
 
