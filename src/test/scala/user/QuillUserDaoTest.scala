@@ -2,6 +2,7 @@ package user
 
 import db.DatabaseError.DuplicateEntry
 import db.FlywayHelper
+import cats.implicits._
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -42,7 +43,7 @@ class QuillUserDaoTest extends AsyncFlatSpec with Matchers with BeforeAndAfterEa
     userDao.storeUser(newUserRegistration(email)).map(eitherDatabaseErrorOrUid => {
       eitherDatabaseErrorOrUid.isRight shouldBe true
       eitherDatabaseErrorOrUid.right.get
-    }).flatMap(userDao.getUser).map(record => {
+    }).flatMap(uid => userDao.getUser(uid).value).map(record => {
       record.isDefined shouldBe true
       record.get.uid should be > 0
       record.get.email shouldBe email

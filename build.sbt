@@ -15,6 +15,7 @@ libraryDependencies ++= Seq(
 libraryDependencies += "com.pauldijou" %% "jwt-core" % "4.2.0"
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3"
 libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
+libraryDependencies += "org.hashids" % "hashids" % "1.0.3"
 
 /** Databases */
 libraryDependencies ++= Seq(
@@ -41,3 +42,6 @@ flywaySchemas += "users"
 
 parallelExecution in IntegrationTest := false
 parallelExecution in Test := false
+
+scalacOptions += "-Ypartial-unification"
+libraryDependencies += "org.typelevel" %% "cats-core" % "2.0.0"

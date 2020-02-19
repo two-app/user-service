@@ -51,7 +51,7 @@ class UserRoute(userService: UserService) {
     logger.info("GET /self")
     UserContext.from(request).map(u => u.uid).fold(
       e => complete(e.status, e),
-      uid => onSuccess(userService.getUser(uid)) {
+      uid => onSuccess(userService.getUser(uid).value) {
         case Left(_: NotFoundError) => complete(StatusCodes.InternalServerError)
         case Left(e: ErrorResponse) => complete(e.status, e)
         case Right(user: User) => complete(user)

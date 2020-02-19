@@ -15,14 +15,15 @@ object ErrorResponse {
   implicit object ErrorResponseFormat extends RootJsonFormat[ErrorResponse] {
     override def read(json: JsValue): ErrorResponse = {
       val fields = json.asJsObject.fields
-      val status = fields("status").convertTo[Int]
-      val reason = fields("reason").toString
+      val statusCode = ("""\d*""".r findFirstIn fields("status").convertTo[String]).get.toInt
+      val reason = fields("reason").convertTo[String]
 
-      status match {
-        case StatusCodes.Unauthorized.intValue => AuthorizationError(reason)
-        case StatusCodes.InternalServerError.intValue => InternalError(reason)
-        case StatusCodes.BadRequest.intValue => ClientError(reason)
-        case StatusCodes.NotFound.intValue => NotFoundError(reason)
+      StatusCode.int2StatusCode(statusCode) match {
+        case StatusCodes.Unauthorized => AuthorizationError(reason)
+        case StatusCodes.InternalServerError => InternalError(reason)
+        case StatusCodes.BadRequest => ClientError(reason)
+        case StatusCodes.NotFound => NotFoundError(reason)
+        case _ => InternalError(reason)
       }
     }
 

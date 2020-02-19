@@ -7,11 +7,11 @@ import response.ErrorResponse.AuthorizationError
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 
-case class UserContext(uid: Int, pid: Option[Int], cid: Option[Int], connectCode: Option[String])
+case class UserContext(uid: Int, pid: Option[Int], cid: Option[Int])
 
 object UserContext {
 
-  implicit val f: RootJsonFormat[UserContext] = jsonFormat4(UserContext.apply)
+  implicit val f: RootJsonFormat[UserContext] = jsonFormat3(UserContext.apply)
 
   def from(accessToken: String): Either[ErrorResponse, UserContext] = {
     Jwt.decode(accessToken, JwtOptions(signature = false, expiration = false, notBefore = false))

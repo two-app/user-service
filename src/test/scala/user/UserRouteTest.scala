@@ -22,6 +22,8 @@ class UserRouteTest extends AsyncFlatSpec with Matchers with ScalaFutures with S
     override def storeCredentials(uid: Int, password: String): Future[Tokens] = Future.successful(
       Tokens(jwt(uid, "testConnectCode"), "testRefresh")
     )
+
+    override def createTokens(uid: Int, pid: Option[Int], cid: Option[Int]): Future[Tokens] = ???
   }
 
   def jwt(uid: Int, connectCode: String): String = Jwt.encode(
@@ -67,8 +69,6 @@ class UserRouteTest extends AsyncFlatSpec with Matchers with ScalaFutures with S
         c.uid should be > 0
         c.pid shouldBe None
         c.cid shouldBe None
-        c.connectCode.isDefined shouldBe true
-        c.connectCode.get shouldBe "testConnectCode"
       })
     }
   }

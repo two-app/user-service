@@ -3,6 +3,8 @@ package user
 import java.util.Date
 
 import authentication.{AuthenticationDao, Tokens}
+import cats.data.OptionT
+import cats.implicits._
 import db.DatabaseError
 import db.DatabaseError.{DuplicateEntry, Other}
 import org.scalatest.BeforeAndAfterEach
@@ -37,7 +39,7 @@ class UserRecordMapperTest extends AnyFlatSpec with Matchers {
   }
 
   "User to UserRecord" should "not be implemented" in {
-    UserRecordMapper.to(Right(User(1, "First", "Last"))) shouldBe null
+    UserRecordMapper.to(Right(User(1, None, None, "First", "Last"))) shouldBe null
   }
 }
 
@@ -49,13 +51,15 @@ class UserServiceTest extends AnyFlatSpec with Matchers with BeforeAndAfterEach 
 
     override def storeUser(ur: UserRegistration): Future[Either[DatabaseError, Int]] = storeUserResponse
 
-    override def getUser(uid: Int): Future[Option[UserRecord]] = getUserResponse
+    override def getUser(uid: Int): OptionT[Future, UserRecord] = OptionT(getUserResponse)
   }
 
   class AuthDaoStub extends AuthenticationDao {
     var storeCredentialsResponse: Future[Tokens] = _
 
     override def storeCredentials(uid: Int, password: String): Future[Tokens] = storeCredentialsResponse
+
+    override def createTokens(uid: Int, pid: Option[Int], cid: Option[Int]): Future[Tokens] = ???
   }
 
   var userDao: UserDaoStub = _
@@ -98,10 +102,10 @@ class UserServiceTest extends AnyFlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   "valid user record" should "be mapped to a user" in {
-    val record = UserRecord(1, None, None, "admin@two.com", "First", "Last", acceptedTerms = true, ofAge = true, null)
+    val record = UserRecord(1, Option(2), Option(3), "admin@two.com", "First", "Last", acceptedTerms = true, ofAge = true, null)
     userDao.getUserResponse = Future.successful(Option(record))
 
-    service.getUser(1).map(_ shouldBe Right(User(1, "First", "Last")))
+    service.getUser(1).map(_ shouldBe Right(User(1, Option(2), Option(3), "First", "Last")))
   }
 
   "empty user record" should "return a NotFound error" in {

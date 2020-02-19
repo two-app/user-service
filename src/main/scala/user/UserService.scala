@@ -1,6 +1,8 @@
 package user
 
 import authentication.{AuthenticationDao, Tokens}
+import cats.data.EitherT
+import cats.implicits._
 import com.typesafe.scalalogging.Logger
 import db.DatabaseError.{DuplicateEntry, Other}
 import db.RecordMapper
@@ -12,7 +14,7 @@ import scala.concurrent.Future
 
 object UserRecordMapper extends RecordMapper[UserRecord, Either[ModelValidationError, User]] {
   override def from(record: UserRecord): Either[ModelValidationError, User] = {
-    User.from(record.uid, record.firstName, record.lastName)
+    User.from(record.uid, record.pid, record.cid, record.firstName, record.lastName)
   }
 
   override def to(model: Either[ModelValidationError, User]): UserRecord = null
@@ -21,7 +23,7 @@ object UserRecordMapper extends RecordMapper[UserRecord, Either[ModelValidationE
 trait UserService {
   def registerUser(ur: UserRegistration): Future[Either[ErrorResponse, Tokens]]
 
-  def getUser(uid: Int): Future[Either[ErrorResponse, User]]
+  def getUser(uid: Int): EitherT[Future, ErrorResponse, User]
 }
 
 class UserServiceImpl(userDao: UserDao, authDao: AuthenticationDao) extends UserService {
@@ -36,13 +38,13 @@ class UserServiceImpl(userDao: UserDao, authDao: AuthenticationDao) extends User
     }
   }
 
-  override def getUser(uid: Int): Future[Either[ErrorResponse, User]] = {
-    logger.info(s"Retrieving user with UID $uid.")
-    userDao.getUser(uid).map { maybeUser: Option[UserRecord] =>
-      for {
-        record <- maybeUser.toRight(NotFoundError(s"User with UID $uid does not exist."))
-        user <- UserRecordMapper.from(record).left.map(e => ClientError(s"User record malformed. Reason: ${e.reason}"))
-      } yield user
-    }
+  override def getUser(uid: Int): EitherT[Future, ErrorResponse, User] = {
+    logger.info(s"Retrieving user by UID $uid.")
+    for {
+      record <- userDao.getUser(uid).toRight(NotFoundError(s"User with UID $uid does not exist."))
+      user <- UserRecordMapper.from(record)
+        .leftMap[ErrorResponse](e => ClientError(s"User record malformed. Reason: ${e.reason}"))
+        .toEitherT[Future]
+    } yield user
   }
 }

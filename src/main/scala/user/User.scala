@@ -1,8 +1,7 @@
 package user
 
-import spray.json.DefaultJsonProtocol.{jsonFormat3, _}
-import spray.json.{JsBoolean, JsString, JsValue, RootJsonFormat}
-import spray.json._
+import spray.json.DefaultJsonProtocol._
+import spray.json.{JsBoolean, JsString, JsValue, RootJsonFormat, _}
 
 final case class ModelValidationError(reason: String)
 
@@ -56,17 +55,17 @@ object UserRegistration {
   private def fail(reason: String): Either[ModelValidationError, UserRegistration] = Left(ModelValidationError(reason))
 }
 
-final case class User(uid: Int, firstName: String, lastName: String)
+final case class User(uid: Int, pid: Option[Int], cid: Option[Int], firstName: String, lastName: String)
 
 object User {
-  implicit val userFormat: RootJsonFormat[User] = jsonFormat3(User.apply)
+  implicit val userFormat: RootJsonFormat[User] = jsonFormat5(User.apply)
 
-  def from(uid: Int, firstName: String, lastName: String): Either[ModelValidationError, User] = {
+  def from(uid: Int, pid: Option[Int], cid: Option[Int], firstName: String, lastName: String): Either[ModelValidationError, User] = {
     if (uid < 1) return Left(ModelValidationError("UID must be greater than zero."))
     if (isEmpty(firstName)) return Left(ModelValidationError("First name must be present."))
     if (isEmpty(lastName)) return Left(ModelValidationError("Last name must be present."))
 
-    Right(new User(uid, firstName, lastName))
+    Right(new User(uid, pid, cid, firstName, lastName))
   }
 
   private def isEmpty(s: String): Boolean = Option(s).getOrElse("").isEmpty

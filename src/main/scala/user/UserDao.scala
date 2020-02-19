@@ -2,6 +2,7 @@ package user
 
 import java.util.Date
 
+import cats.data.OptionT
 import com.github.mauricio.async.db.mysql.exceptions.MySQLException
 import com.typesafe.scalalogging.Logger
 import db.DatabaseError
@@ -32,7 +33,7 @@ object UserRecord {
 trait UserDao {
   def storeUser(ur: UserRegistration): Future[Either[DatabaseError, Int]]
 
-  def getUser(uid: Int): Future[Option[UserRecord]]
+  def getUser(uid: Int): OptionT[Future, UserRecord]
 }
 
 class QuillUserDao extends UserDao {
@@ -50,12 +51,12 @@ class QuillUserDao extends UserDao {
     }
   }
 
-  override def getUser(uid: Int): Future[Option[UserRecord]] = {
+  override def getUser(uid: Int): OptionT[Future, UserRecord] = {
     logger.info(s"Retrieving user by UID $uid.")
 
-    run(quote {
+    OptionT(run(quote {
       querySchema[UserRecord]("user").filter(u => u.uid == lift(uid))
-    }).map(r => r.headOption)
+    }).map(r => r.headOption))
   }
 
 }
