@@ -1,6 +1,8 @@
 package partner
 
 import authentication.{AuthenticationDao, Tokens}
+import cats.data.EitherT
+import cats.implicits._
 import couple.{CoupleDao, CoupleRecord}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.flatspec.AnyFlatSpec
@@ -16,13 +18,13 @@ import scala.concurrent.Future
 class PartnerServiceImplTest extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
 
   class UserServiceStub extends UserService {
-    val userMap: mutable.Map[Int, Either[ErrorResponse, User]] = new mutable.HashMap[Int, Either[ErrorResponse, User]]
+    val userMap: mutable.Map[Int, User] = new mutable.HashMap[Int, User]
 
     override def registerUser(ur: UserRegistration): Future[Either[ErrorResponse, Tokens]] = ???
 
-    override def getUser(uid: Int): Future[Either[ErrorResponse, User]] = Future.successful(
-      userMap.getOrElse(uid, Left(NotFoundError("")))
-    )
+    override def getUser(uid: Int): EitherT[Future, ErrorResponse, User] = userMap.get(uid)
+      .toRight[ErrorResponse](NotFoundError(""))
+      .toEitherT[Future]
   }
 
   class CoupleDaoStub extends CoupleDao {
@@ -49,8 +51,8 @@ class PartnerServiceImplTest extends AnyFlatSpec with Matchers with BeforeAndAft
   }
 
   "if the partnership is valid it" should "create tokens" in {
-    userServiceStub.userMap.put(1, Right(User(1, None, None, "User", "Last")))
-    userServiceStub.userMap.put(10, Right(User(10, None, None, "Partner", "Last")))
+    userServiceStub.userMap.put(1, User(1, None, None, "User", "Last"))
+    userServiceStub.userMap.put(10, User(10, None, None, "Partner", "Last"))
 
     partnerService.connectUsers(1, 10).map(errorOrTokens => {
       errorOrTokens shouldBe Right(stubTokens)
@@ -58,7 +60,7 @@ class PartnerServiceImplTest extends AnyFlatSpec with Matchers with BeforeAndAft
   }
 
   "if the user is already connected it" should "return a client error" in {
-    userServiceStub.userMap.put(1, Right(User(1, Option(2), Option(3), "First", "Last")))
+    userServiceStub.userMap.put(1, User(1, Option(2), Option(3), "First", "Last"))
 
     partnerService.connectUsers(1, 10).map(errorOrTokens => {
       errorOrTokens shouldBe Left(ClientError("User already has a partner."))
@@ -66,7 +68,7 @@ class PartnerServiceImplTest extends AnyFlatSpec with Matchers with BeforeAndAft
   }
 
   "if the partner does not exist it" should "return a not found error" in {
-    userServiceStub.userMap.put(1, Right(User(1, None, None, "First", "Last")))
+    userServiceStub.userMap.put(1, User(1, None, None, "First", "Last"))
 
     partnerService.connectUsers(1, 10).map(errorOrTokens => {
       errorOrTokens shouldBe Left(NotFoundError(""))
@@ -74,8 +76,8 @@ class PartnerServiceImplTest extends AnyFlatSpec with Matchers with BeforeAndAft
   }
 
   "if the partner already has a partner it" should "return a client error" in {
-    userServiceStub.userMap.put(1, Right(User(1, None, None, "User", "Last")))
-    userServiceStub.userMap.put(10, Right(User(10, Option(2), Option(3), "Partner", "Last")))
+    userServiceStub.userMap.put(1, User(1, None, None, "User", "Last"))
+    userServiceStub.userMap.put(10, User(10, Option(2), Option(3), "Partner", "Last"))
 
     partnerService.connectUsers(1, 10).map(errorOrTokens => {
       errorOrTokens shouldBe Left(ClientError("Partner already has a partner."))

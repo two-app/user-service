@@ -23,12 +23,13 @@ class PartnerRoute(partnerService: PartnerService) {
   }
 
   def connectUserToPartner(request: HttpRequest, connectCode: String): Route = {
+    logger.info(s"POST /partner with connect code $connectCode.")
     UserContext.from(request)
       .filterOrElse(ctx => ctx.pid.isEmpty, ClientError("User already has a partner."))
       .map(ctx => ctx.uid)
       .flatMap(uid => ConnectCode.toId(connectCode).map(pid => (uid, pid)).toRight(ClientError("Invalid connect code.")))
       .filterOrElse(ids => ids._1 != ids._2, ClientError("You can't partner with yourself."))
-      .map(ids => partnerService.connectUsers(ids._1, ids._2))
+      .map(ids => partnerService.connectUsers(ids._1, ids._2).value)
       .fold(
         e => complete(e.status, e),
         tokensFuture => onSuccess(tokensFuture) {

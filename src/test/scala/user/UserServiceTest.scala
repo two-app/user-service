@@ -3,6 +3,8 @@ package user
 import java.util.Date
 
 import authentication.{AuthenticationDao, Tokens}
+import cats.data.OptionT
+import cats.implicits._
 import db.DatabaseError
 import db.DatabaseError.{DuplicateEntry, Other}
 import org.scalatest.BeforeAndAfterEach
@@ -49,7 +51,7 @@ class UserServiceTest extends AnyFlatSpec with Matchers with BeforeAndAfterEach 
 
     override def storeUser(ur: UserRegistration): Future[Either[DatabaseError, Int]] = storeUserResponse
 
-    override def getUser(uid: Int): Future[Option[UserRecord]] = getUserResponse
+    override def getUser(uid: Int): OptionT[Future, UserRecord] = OptionT(getUserResponse)
   }
 
   class AuthDaoStub extends AuthenticationDao {
