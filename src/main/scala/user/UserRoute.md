@@ -3,7 +3,7 @@ The Users API provides REST endpoints to create, retrieve, and manipulate users.
 ## Endpoints
 | Verb | Endpoint | Description                     | Input                                  | Output            |
 |------|----------|---------------------------------|----------------------------------------|-------------------|
-| POST | `/self`  | Register a new user.            | [UserRegistration](#User Registration) | [Tokens](#Tokens) |
+| POST | `/self`  | Register a new user.            | [UserRegistration](#User-Registration) | [Tokens](#Tokens) |
 | GET  | `/self`  | Retrieve user from Auth header. |                                        | [User](#User)     |
 
 ## Models
