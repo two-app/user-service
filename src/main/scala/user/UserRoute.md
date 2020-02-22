@@ -27,9 +27,10 @@ The Users API provides REST endpoints to create, retrieve, and manipulate users.
 	"password": "SomethingStrong",
 	"acceptedTerms": true,
 	"ofAge": true,
-	"receivesEmails": false // can be omitted
+	"receivesEmails": false
 }
 ```
+In this example, `receiveEmails` can simply be omitted as it is `Optional`.
 
 ### User
 | Attribute | Type          |
