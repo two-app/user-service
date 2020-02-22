@@ -12,7 +12,7 @@ The Users API provides REST endpoints to create, retrieve, and manipulate users.
 |----------------|----------------|--------------------------------------|
 | firstName      | `string`       | length >= 2                          |
 | lastName       | `string`       | length >= 2                          |
-| email          | `string`       | https://stackoverflow.com/a/32445372 |
+| email          | `string`       | unique && https://stackoverflow.com/a/32445372 |
 | password       | `string`       | length >= 6                          |
 | acceptedTerms  | `bool`         | true                              |
 | ofAge          | `bool`         | true                              |
