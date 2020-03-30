@@ -6,89 +6,121 @@ import akka.http.scaladsl.model.{ContentTypes, HttpRequest, StatusCodes}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import spray.json.DefaultJsonProtocol.{jsonFormat2, _}
+import spray.json.{RootJsonFormat, _}
 import authentication.{AuthenticationDao, Tokens}
-import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import pdi.jwt.{Jwt, JwtClaim}
 import request.UserContext
 
-import scala.concurrent.Future
 import scala.util.Random
+import org.scalatest.funspec.AsyncFunSpec
+import authentication.AuthenticationDaoStub
+import config.MasterRoute
+import response.ErrorResponse
+import response.ErrorResponse.AuthorizationError
+import response.ErrorResponse.ClientError
 
-class UserRouteTest extends AsyncFlatSpec with Matchers with ScalaFutures with ScalatestRouteTest {
+class UserRouteTest extends AsyncFunSpec with Matchers with ScalatestRouteTest {
 
-  class AuthDaoStub extends AuthenticationDao {
-    override def storeCredentials(uid: Int, password: String): Future[Tokens] = Future.successful(
-      Tokens(jwt(uid, "testConnectCode"), "testRefresh")
+  val route: Route = new UserRoute(
+    new UserServiceImpl(
+      MasterRoute.services.userDao,
+      new AuthenticationDaoStub()
     )
+  ).route
 
-    override def createTokens(uid: Int, pid: Option[Int], cid: Option[Int]): Future[Tokens] = ???
-  }
+  def authHeader(token: String): List[RawHeader] =
+    List(RawHeader("Authorization", s"Bearer $token"))
 
-  def jwt(uid: Int, connectCode: String): String = Jwt.encode(
-    claim = JwtClaim(content = s"""{"uid": $uid, "connectCode": "$connectCode"}""")
-  )
+  describe("POST /self") {
+    implicit val UserRegistrationFormat: RootJsonFormat[UserRegistration] =
+      jsonFormat6(UserRegistration.apply)
 
-  val route: Route = new UserRoute(new UserServiceImpl(new QuillUserDao(), new AuthDaoStub())).route
+    it("should return a 400 Bad Request with a duplicate email") {
+      val registration: UserRegistration = newUser()
 
-  "GET /self without a token" should "return unauthorized" in {
-    Get("/self") ~> route ~> check {
-      response.status shouldEqual StatusCodes.Unauthorized
-      responseAs[String] shouldEqual """{"status":"401 Unauthorized","reason":"Authorization not provided."}"""
-    }
-  }
+      Post("/self", registration) ~> route ~> check {
+        response.status shouldBe StatusCodes.OK
 
-  val InvalidTokenReq: HttpRequest = HttpRequest(uri = "/self", headers = List(RawHeader("Authorization", "Bearer X")))
-
-  "GET /self with an invalid token" should "return unauthorized" in {
-    InvalidTokenReq ~> route ~> check {
-      response.status shouldEqual StatusCodes.Unauthorized
-      responseAs[String] shouldEqual """{"status":"401 Unauthorized","reason":"Invalid token format."}"""
-    }
-  }
-
-  "GET /self with a valid user" should "return the user details" in {
-    registerUser(randomEmail()) ~> route ~> check {
-      response.status shouldEqual StatusCodes.OK
-      Unmarshal(response).to[Tokens].map(t => t.accessToken).map(accessToken => {
-        val getSelf = HttpRequest(uri = "/self", headers = List(RawHeader("Authorization", s"Bearer $accessToken")))
-        val uid = UserContext.from(accessToken).right.get.uid
-        getSelf ~> route ~> check {
-          response.status shouldEqual StatusCodes.OK
-          entityAs[String] shouldEqual s"""{"firstName":"first","lastName":"last","uid":$uid}"""
+        Post("/self", registration) ~> route ~> check {
+          entityAs[ErrorResponse] shouldBe ClientError("An account with this email exists.")
         }
-      })
+      }
     }
-  }
 
-  "POST /self with a valid user" should "return a generated UID" in {
-    registerUser(randomEmail()) ~> route ~> check {
-      response.status shouldEqual StatusCodes.OK
-      Unmarshal(response).to[Tokens].map(t => t.accessToken).map(at => UserContext.from(at).right.get).map(c => {
-        c.uid should be > 0
-        c.pid shouldBe None
-        c.cid shouldBe None
-      })
-    }
-  }
+    it("should store a valid user") {
+      val registration: UserRegistration = newUser()
 
-  "POST /self with duplicate email" should "return a bad request" in {
-    val email = randomEmail()
-    registerUser(email) ~> route ~> check {
-      response.status shouldEqual StatusCodes.OK
-      registerUser(email) ~> route ~> check {
-        response.status shouldEqual StatusCodes.BadRequest
-        responseAs[String] shouldEqual """{"status":"400 Bad Request","reason":"An account with this email exists."}"""
+      Post("/self", registration) ~> route ~> check {
+        response.status shouldBe StatusCodes.OK
+        val tokens: Tokens = entityAs[Tokens]
+        val tokenUID: Int = UserContext.from(tokens.accessToken).right.get.uid
+
+        Get("/self").withHeaders(authHeader(tokens.accessToken)) ~> route ~> check {
+          response.status shouldBe StatusCodes.OK
+          val user: User = responseAs[User]
+
+          user.uid shouldBe tokenUID
+          user.pid shouldBe None
+          user.cid shouldBe None
+          user.firstName shouldBe registration.firstName
+          user.lastName shouldBe registration.lastName
+        }
       }
     }
   }
 
+  describe("GET /self") {
+    it("should return 401 Unauthorized without a token") {
+      Get("/self") ~> route ~> check {
+        response.status shouldBe StatusCodes.Unauthorized
+        responseAs[ErrorResponse] shouldBe AuthorizationError(
+          "Authorization not provided."
+        )
+      }
+    }
+
+    it("should return 401 Unauthorized with an invalid token") {
+      def request = Get("/self").withHeaders(authHeader("x"))
+
+      request ~> route ~> check {
+        responseAs[ErrorResponse] shouldBe AuthorizationError(
+          "Invalid token format."
+        )
+      }
+    }
+  }
+
+  // "POST /self with duplicate email" should "return a bad request" in {
+  //   val email = randomEmail()
+  //   registerUser(email) ~> route ~> check {
+  //     response.status shouldEqual StatusCodes.OK
+  //     registerUser(email) ~> route ~> check {
+  //       response.status shouldEqual StatusCodes.BadRequest
+  //       responseAs[String] shouldEqual """{"status":"400 Bad Request","reason":"An account with this email exists."}"""
+  //     }
+  //   }
+  // }
+
+  def newUser(): UserRegistration = UserRegistration(
+    firstName = "First",
+    lastName = "Last",
+    email = randomEmail(),
+    password = "StrongPassword",
+    acceptedTerms = true,
+    ofAge = true
+  )
+
   def registerUser(email: String): HttpRequest = {
-    val userRegistration = s"""{"firstName": "first", "lastName": "last", "email": "$email", "password": "strongpass", "acceptedTerms": true, "ofAge": true}"""
+    val userRegistration =
+      s"""{"firstName": "first", "lastName": "last", "email": "$email", "password": "strongpass", "acceptedTerms": true, "ofAge": true}"""
     Post("/self").withEntity(ContentTypes.`application/json`, userRegistration)
   }
 
-  def randomEmail(): String = "userServiceWorkflowTest-" + Random.alphanumeric.take(10).mkString + "@twotest.com"
+  def randomEmail(): String =
+    "userServiceWorkflowTest-" + Random.alphanumeric
+      .take(10)
+      .mkString + "@twotest.com"
 
 }

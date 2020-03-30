@@ -1,49 +1,70 @@
 package couple
 
 import com.typesafe.scalalogging.Logger
-import db.ctx._
 import user.UserRecord
+import cats.data.OptionT
+import cats.effect.Bracket
+import db.DateTimeModule._
+import doobie.free.connection.ConnectionIO
+import doobie.implicits._
+import doobie.util.transactor.Transactor
+import doobie.util.update.Update0
+import java.time.Instant
 
-import scala.concurrent.ExecutionContext.Implicits.{global => ec}
-import scala.concurrent.Future
-
-final case class CoupleRecord(cid: Int, uid: Int, pid: Int)
+final case class CoupleRecord(cid: Int, uid: Int, pid: Int, created_at: Instant)
 
 object CoupleRecord {
-  def asInsertRecord(uid: Int, pid: Int): CoupleRecord = CoupleRecord(0, uid, pid)
+  def from(uid: Int, pid: Int): CoupleRecord = CoupleRecord(0, uid, pid, Instant.now())
 }
 
-trait CoupleDao {
-  def storeCouple(uid: Int, pid: Int): Future[Int]
+trait CoupleDao[F[_]] {
+  def storeCouple(uid: Int, pid: Int): F[Int]
 
-  def getCouple(cid: Int): Future[Option[CoupleRecord]]
+  def getCouple(cid: Int): OptionT[F, CoupleRecord]
 
-  def connectUserToPartner(uid: Int, pid: Int, cid: Int): Future[Unit]
+  def connectUserToPartner(uid: Int, pid: Int, cid: Int): F[Unit]
 }
 
-class QuillCoupleDao extends CoupleDao {
-  val logger: Logger = Logger(classOf[QuillCoupleDao])
+class DoobieCoupleDao[F[_]: Bracket[*[_], Throwable]](
+    val xa: Transactor[F]
+) extends CoupleDao[F] {
+  override def storeCouple(uid: Int, pid: Int): F[Int] =
+    CoupleSql
+      .insert(CoupleRecord.from(uid, pid))
+      .transact(xa)
 
-  override def storeCouple(uid: Int, pid: Int): Future[Int] = {
-    logger.info(s"Storing new couple with UID $uid and PID $pid.")
-    run(quote {
-      querySchema[CoupleRecord]("couple").insert(lift(CoupleRecord.asInsertRecord(uid, pid))).returningGenerated(_.cid)
-    })
-  }
+  override def getCouple(cid: Int): OptionT[F, CoupleRecord] = OptionT(
+    CoupleSql.select(cid).transact(xa)
+  )
 
-  override def getCouple(cid: Int): Future[Option[CoupleRecord]] = {
-    logger.info(s"Retrieving couple by CID $cid.")
-    run(quote {
-      querySchema[CoupleRecord]("couple").filter(_.cid == lift(cid))
-    }).map(r => r.headOption)
-  }
+  override def connectUserToPartner(uid: Int, pid: Int, cid: Int): F[Unit] =
+    connectionTransaction(uid, pid).transact(xa)
 
-  override def connectUserToPartner(uid: Int, pid: Int, cid: Int): Future[Unit] = {
-    logger.info(s"Connecting UID $uid to PID $pid.")
-    run(quote {
-      querySchema[UserRecord]("user")
-        .filter(_.uid == lift(uid))
-        .update(_.pid -> lift(Option(pid)), _.cid -> lift(Option(cid)))
-    }).map(_ => ())
-  }
+  private def connectionTransaction(uid: Int, pid: Int): ConnectionIO[Unit] =
+    for {
+      updateUser <- CoupleSql.updateUserPartnerId(uid, pid)
+      updatePartner <- CoupleSql.updateUserPartnerId(pid, uid)
+    } yield ()
+}
+
+object CoupleSql {
+  def insert(coupleRecord: CoupleRecord): ConnectionIO[Int] =
+    sql"""
+         | INSERT INTO couple (uid, pid, connected_at)
+         | VALUES (${coupleRecord.uid}, ${coupleRecord.pid}, ${coupleRecord.created_at})
+         |""".stripMargin.update.withUniqueGeneratedKeys[Int]("cid")
+
+  def select(cid: Int): ConnectionIO[Option[CoupleRecord]] =
+    sql"""
+         | SELECT cid, uid, pid, connected_at
+         | FROM couple
+         | WHERE cid = $cid
+         |""".stripMargin.query[CoupleRecord].option
+
+  def updateUserPartnerId(uid: Int, pid: Int): ConnectionIO[Int] =
+    sql"""
+         | UPDATE user
+         | SET pid = $pid
+         | WHERE uid = $uid
+         |""".stripMargin.update.run
 }
