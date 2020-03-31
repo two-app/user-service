@@ -11,90 +11,154 @@ import cats.data.EitherT
 import cats.implicits._
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.flatspec.AsyncFlatSpec
+import org.scalatest.funspec.AsyncFunSpec
 import org.scalatest.matchers.should.Matchers
-import pdi.jwt.{Jwt, JwtClaim}
 import response.ErrorResponse
 import response.ErrorResponse.ClientError
+import authentication.AuthTestArbitraries
+import user.UserTestArbitraries
+import db.FlywayHelper
+import config.MasterRoute
+import cats.effect.IO
+import user.UserServiceImpl
+import authentication.AuthenticationDaoStub
+import user.UserRoute
+import request.UserContext
 
-import scala.concurrent.Future
-
-class PartnerRouteTest extends AsyncFlatSpec with Matchers with ScalaFutures with ScalatestRouteTest with BeforeAndAfterEach {
-
-  def jwt(uid: Int, pid: Int, cid: Int): String = Jwt.encode(
-    claim = JwtClaim(content = s"""{"uid": $uid, "pid": $pid, "cid": $cid}""")
-  )
-
-  def unconnectedJwt(uid: Int, connectCode: String): String = Jwt.encode(
-    claim = JwtClaim(content = s"""{"uid": $uid, "connectCode": "$connectCode"}""")
-  )
-
-  def authHeader(jwt: String): RawHeader = RawHeader("Authorization", s"Bearer $jwt")
+class PartnerRouteTest
+    extends AsyncFunSpec
+    with Matchers
+    with ScalatestRouteTest
+    with BeforeAndAfterEach
+    with AuthTestArbitraries
+    with UserTestArbitraries {
 
   val userOneConnectCode = "zQp7Wl"
   val userTwoConnectCode = "0Q3ar8"
 
-  "POST /partner/xyz" should "return tokens for two unconnected users" in {
-    val tokens = Tokens("testAccess", "testRefresh")
-    val route = new TestBed().onConnectUsers(Right(tokens)).build()
-    val header = authHeader(unconnectedJwt(1, userOneConnectCode))
-    val req = HttpRequest(HttpMethods.POST, s"/partner/$userTwoConnectCode", headers = List(header))
+  val partnerRoute: Route = new PartnerRoute(
+    new PartnerServiceImpl[IO](
+      new UserServiceImpl[IO](
+        MasterRoute.services.userDao,
+        new AuthenticationDaoStub()
+      ),
+      MasterRoute.services.coupleDao,
+      new AuthenticationDaoStub()
+    )
+  ).route
 
-    req ~> route ~> check {
-      status shouldBe StatusCodes.OK
-      entityAs[Tokens] shouldBe tokens
-    }
-  }
+  val userRoute: Route = new UserRoute(
+    new UserServiceImpl[IO](
+      MasterRoute.services.userDao,
+      new AuthenticationDaoStub()
+    )
+  ).route
 
-  "POST /partner/xyz for an already connected user token" should "return bad request" in {
-    val route = new TestBed().onConnectUsersFail().build()
-    val header = authHeader(jwt(1, 2, 3))
-    val req: HttpRequest = HttpRequest(HttpMethods.POST, s"/partner/$userTwoConnectCode", headers = List(header))
-    req ~> route ~> check {
-      status shouldBe StatusCodes.BadRequest
-      Unmarshal(response).to[ErrorResponse].map(er => {
-        er shouldBe ClientError("User already has a partner.")
-      })
-    }
-  }
+  override def beforeEach(): Unit = FlywayHelper.cleanMigrate()
 
-  "POST /partner/xyz with the same connect code as requesting user" should "return bad request" in {
-    val route = new TestBed().onConnectUsersFail().build()
-    val header = authHeader(unconnectedJwt(1, userOneConnectCode))
-    val req = HttpRequest(HttpMethods.POST, s"/partner/$userOneConnectCode", headers = List(header))
-    req ~> route ~> check {
-      status shouldBe StatusCodes.BadRequest
-      Unmarshal(response).to[ErrorResponse].map(er => {
-        er shouldBe ClientError("You can't partner with yourself.")
-      })
-    }
-  }
+  def registerUserRequest(): HttpRequest =
+    Post("/self", randomUserRegistration())
+  def connectRequest(tokens: Tokens, connectCode: String): HttpRequest =
+    Post(s"/partner/$connectCode")
+      .withHeaders(List(authHeader(tokens.accessToken)))
 
-  "POST /partner/xyz with a connect code that does not exist" should "return bad request" in {
-    val error = ClientError("x")
-    val route = new TestBed().onConnectUsers(Left(error)).build()
-    val header = authHeader(unconnectedJwt(1, userOneConnectCode))
-    val req = HttpRequest(HttpMethods.POST, s"/partner/$userTwoConnectCode", headers = List(header))
+  describe("POST /partner/{connectCode}") {
+    it("should return new tokens for two unconnected users") {
+      // Register the first user
+      registerUserRequest() ~> userRoute ~> check {
+        val userTokens: Tokens = entityAs[Tokens]
+        val uid: Int = extractContext(userTokens.accessToken).uid
 
-    req ~> route ~> check {
-      status shouldBe StatusCodes.BadRequest
-      entityAs[ErrorResponse] shouldBe error
-    }
-  }
+        // Register the second user and generate their connect code
+        registerUserRequest() ~> userRoute ~> check {
+          val partnerTokens: Tokens = entityAs[Tokens]
+          val pid: Int = extractContext(partnerTokens.accessToken).uid
+          val partnerConnectCode = connectCodeFromId(pid) // TODO have CC in UserContext
 
-  private class TestBed {
-    var partnerServiceStub: PartnerService = _
+          // Connect the two users, verifying returned tokens
+          connectRequest(userTokens, partnerConnectCode) ~> partnerRoute ~> check {
+            response.status shouldBe StatusCodes.OK
+            val newUserTokens: Tokens = entityAs[Tokens]
+            val newUserContext: UserContext =
+              extractContext(newUserTokens.accessToken)
 
-    def onConnectUsers(errorOrTokens: Either[ErrorResponse, Tokens]): TestBed = {
-      partnerServiceStub = (_, _) => EitherT.fromEither[Future](errorOrTokens)
-      this
+            newUserContext.uid shouldBe uid
+            newUserContext.pid shouldBe Option(pid)
+            newUserContext.cid shouldBe Option(1)
+          }
+        }
+      }
     }
 
-    def onConnectUsersFail(): TestBed = {
-      partnerServiceStub = (_, _) => fail("Expected partner service not to be called.")
-      this
+    it("should return Bad Request for an already connected user") {
+      registerUserRequest() ~> userRoute ~> check {
+        val userTokens: Tokens = entityAs[Tokens]
+        registerUserRequest() ~> userRoute ~> check {
+          val partnerTokens: Tokens = entityAs[Tokens]
+          val pid: Int = extractContext(partnerTokens.accessToken).uid
+          val partnerConnectCode: String = connectCodeFromId(pid)
+
+          // Connect user, then reattempt connect
+          connectRequest(userTokens, partnerConnectCode) ~> partnerRoute ~> check {
+            response.status shouldBe StatusCodes.OK
+
+            connectRequest(userTokens, partnerConnectCode) ~> partnerRoute ~> check {
+              response.status shouldBe StatusCodes.BadRequest
+              entityAs[ErrorResponse] shouldBe ClientError("User already has a partner.")
+            }
+          }
+        }
+      }
     }
 
-    def build(): Route = new PartnerRoute(partnerServiceStub).route
+    it("should return Bad Request for an already connected partner") {
+      registerUserRequest() ~> userRoute ~> check {
+        val userTokens: Tokens = entityAs[Tokens]
+        registerUserRequest() ~> userRoute ~> check {
+          val partnerTokens: Tokens = entityAs[Tokens]
+          val pid: Int = extractContext(partnerTokens.accessToken).uid
+          val partnerConnectCode: String = connectCodeFromId(pid)
+
+          connectRequest(userTokens, partnerConnectCode) ~> partnerRoute ~> check {
+            response.status shouldBe StatusCodes.OK
+
+            // register new user and attempt connection with partner
+            registerUserRequest() ~> userRoute ~> check {
+              val newUserTokens: Tokens = entityAs[Tokens]
+
+              connectRequest(newUserTokens, partnerConnectCode) ~> partnerRoute ~> check {
+                response.status shouldBe StatusCodes.BadRequest
+                entityAs[ErrorResponse] shouldBe ClientError(
+                  "Partner already has a partner."
+                )
+              }
+            }
+          }
+        }
+      }
+    }
+
+    it("should return bad request trying to connect with yourself") {
+      registerUserRequest() ~> userRoute ~> check {
+        val userTokens: Tokens = entityAs[Tokens]
+        val userContext: UserContext = extractContext(userTokens.accessToken)
+        val userConnectCode: String = connectCodeFromId(userContext.uid)
+
+        connectRequest(userTokens, userConnectCode) ~> partnerRoute ~> check {
+          response.status shouldBe StatusCodes.BadRequest
+          entityAs[ErrorResponse] shouldBe ClientError("You can't partner with yourself.")
+        }
+      }
+    }
+
+    it("should return bad request with an incorrect connect code") {
+      registerUserRequest() ~> userRoute ~> check {
+        val userTokens: Tokens = entityAs[Tokens]
+        
+        connectRequest(userTokens, "RandomConnectCode") ~> partnerRoute ~> check {
+          entityAs[ErrorResponse] shouldBe ClientError("Invalid connect code.")
+        }
+      }
+    }
   }
 }

@@ -11,26 +11,43 @@ import user.UserService
 
 import scala.concurrent.ExecutionContext.Implicits.{global => ec}
 import scala.concurrent.Future
+import cats.Monad
+import response.ErrorResponse.NotFoundError
 
-trait PartnerService {
-  def connectUsers(uid: Int, pid: Int): EitherT[Future, ErrorResponse, Tokens]
+trait PartnerService[F[_]] {
+  def connectUsers(uid: Int, pid: Int): EitherT[F, ErrorResponse, Tokens]
 }
 
-class PartnerServiceImpl(userService: UserService, coupleDao: CoupleDao, authDao: AuthenticationDao) extends PartnerService {
-  val logger: Logger = Logger(classOf[PartnerService])
+class PartnerServiceImpl[F[_]: Monad](
+    userService: UserService[F],
+    coupleDao: CoupleDao[F],
+    authDao: AuthenticationDao[F]
+) extends PartnerService[F] {
+  val logger: Logger = Logger(classOf[PartnerService[F]])
 
-  override def connectUsers(uid: Int, pid: Int): EitherT[Future, ErrorResponse, Tokens] = {
+  override def connectUsers(
+      uid: Int,
+      pid: Int
+  ): EitherT[F, ErrorResponse, Tokens] = {
     logger.info(s"Connecting users $uid and $pid.")
-    userService.getUser(uid)
-      .ensure(ClientError("User already has a partner."))(u => u.pid.isEmpty)
-      .flatMap(_ => userService.getUser(pid))
-      .ensure(ClientError("Partner already has a partner."))(p => p.pid.isEmpty)
-      .flatMap(_ => EitherT.right[ErrorResponse](coupleDao.storeCouple(uid, pid)))
-      .map(cid => {
+    for {
+      user <- userService
+        .getUser(uid)
+        .ensure(ClientError("User already has a partner."))(_.pid.isEmpty)
+      partner <- userService
+        .getUser(pid)
+        .leftMap {case NotFoundError(e) => NotFoundError("Partner does not exist.")}
+        .ensure(ClientError("Partner already has a partner."))(_.pid.isEmpty)
+      cid <- EitherT.right[ErrorResponse](coupleDao.storeCouple(uid, pid))
+      _ <- EitherT.right[ErrorResponse](
         coupleDao.connectUserToPartner(uid, pid, cid)
+      )
+      _ <- EitherT.right[ErrorResponse](
         coupleDao.connectUserToPartner(pid, uid, cid)
-        cid
-      })
-      .flatMap(cid => EitherT.right(authDao.createTokens(uid, Option(pid), Option(cid))))
+      )
+      newTokens <- EitherT.right[ErrorResponse](
+        authDao.createTokens(uid, Option(pid), Option(cid))
+      )
+    } yield newTokens
   }
 }

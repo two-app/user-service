@@ -6,7 +6,6 @@ import authentication.{AuthenticationDao, Tokens}
 import cats.data.OptionT
 import cats.implicits._
 import db.DatabaseError
-import db.DatabaseError.{DuplicateEntry, Other}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -14,11 +13,32 @@ import response.ErrorResponse.{ClientError, InternalError, NotFoundError}
 
 import scala.concurrent.ExecutionContext.Implicits.{global => ec}
 import scala.concurrent.Future
+import java.time.Instant
+import org.scalatest.funspec.AnyFunSpec
+import cats.effect.IO
+import config.MasterRoute
+import db.FlywayHelper
+import config.Services
+import scala.util.Random
+import cats.effect.Sync
+import response.ErrorResponse
+import request.UserContext
+
+import authentication._
 
 class UserRecordMapperTest extends AnyFlatSpec with Matchers {
   "User from UserRecord" should "return the correct data" in {
-    val date = new Date()
-    val record = UserRecord(1, Option(2), Option(3), "admin@two.com", "First", "Last", acceptedTerms = true, ofAge = true, date)
+    val record = UserRecord(
+      1,
+      Option(2),
+      Option(3),
+      "admin@two.com",
+      "First",
+      "Last",
+      acceptedTerms = true,
+      ofAge = true,
+      Instant.now()
+    )
 
     val user: Either[ModelValidationError, User] = UserRecordMapper.from(record)
 
@@ -32,8 +52,17 @@ class UserRecordMapperTest extends AnyFlatSpec with Matchers {
   }
 
   "Invalid User from UserRecord" should "return an InvalidUserError" in {
-    val date = new Date()
-    val record = UserRecord(-10, Option(2), Option(3), "admin@two.com", "First", "Last", acceptedTerms = true, ofAge = true, date)
+    val record = UserRecord(
+      -10,
+      Option(2),
+      Option(3),
+      "admin@two.com",
+      "First",
+      "Last",
+      acceptedTerms = true,
+      ofAge = true,
+      Instant.now()
+    )
 
     UserRecordMapper.from(record).isLeft shouldBe true
   }
@@ -43,83 +72,80 @@ class UserRecordMapperTest extends AnyFlatSpec with Matchers {
   }
 }
 
-class UserServiceTest extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
+class UserServiceTest extends AnyFunSpec with Matchers with BeforeAndAfterEach {
+  
+  var userService: UserService[IO] = new UserServiceImpl[IO](
+    MasterRoute.services.userDao,
+    new AuthenticationDaoStub[IO]()
+  )
 
-  class UserDaoStub extends UserDao {
-    var storeUserResponse: Future[Either[DatabaseError, Int]] = _
-    var getUserResponse: Future[Option[UserRecord]] = _
+  override def beforeEach(): Unit = FlywayHelper.cleanMigrate()
 
-    override def storeUser(ur: UserRegistration): Future[Either[DatabaseError, Int]] = storeUserResponse
+  describe("registerUser") {
+    it("valid registration should return tokens") {
+      val tokens: Tokens =
+        userService.registerUser(newUser()).value.unsafeRunSync().right.get
 
-    override def getUser(uid: Int): OptionT[Future, UserRecord] = OptionT(getUserResponse)
+      UserContext.from(tokens.accessToken).right.get.uid should be > 0
+    }
+
+    it("should return a client error for a duplicate user") {
+      val userRegistration: UserRegistration = newUser()
+
+      userService // register the user once
+        .registerUser(userRegistration)
+        .value
+        .unsafeRunSync()
+        .isRight shouldBe true
+
+      val errorOrTokens: Either[ErrorResponse, Tokens] = // register again
+        userService.registerUser(userRegistration).value.unsafeRunSync()
+
+      errorOrTokens shouldBe Left(
+        ClientError("An account with this email exists.")
+      )
+    }
   }
 
-  class AuthDaoStub extends AuthenticationDao {
-    var storeCredentialsResponse: Future[Tokens] = _
+  describe("getUser") {
+    it("should return a not found error for a non-existent uid") {
+      val uid = 10
 
-    override def storeCredentials(uid: Int, password: String): Future[Tokens] = storeCredentialsResponse
+      val errorOrUser: Either[ErrorResponse, User] =
+        userService.getUser(uid).value.unsafeRunSync()
 
-    override def createTokens(uid: Int, pid: Option[Int], cid: Option[Int]): Future[Tokens] = ???
+      errorOrUser shouldBe Left(
+        NotFoundError(s"User with UID $uid does not exist.")
+      )
+    }
+
+    it("should return a user with the registration details") {
+      val registration: UserRegistration = newUser()
+      val tokens: Tokens =
+        userService.registerUser(registration).value.unsafeRunSync().right.get
+      val userContext: UserContext = UserContext.from(tokens.accessToken).right.get
+
+      val user: User = userService.getUser(userContext.uid).value.unsafeRunSync().right.get
+      user.firstName shouldBe registration.firstName
+      user.lastName shouldBe registration.lastName
+      user.pid shouldBe None
+      user.cid shouldBe None
+    }
   }
 
-  var userDao: UserDaoStub = _
-  var authDao: AuthDaoStub = _
-  var service: UserServiceImpl = _
+  def newUser(): UserRegistration =
+    UserRegistration
+      .from(
+        "First",
+        "Last",
+        randomEmail(),
+        "TestPassword",
+        acceptedTerms = true,
+        ofAge = true
+      )
+      .right
+      .get
 
-  override protected def beforeEach(): Unit = {
-    userDao = new UserDaoStub()
-    authDao = new AuthDaoStub()
-    service = new UserServiceImpl(userDao, authDao)
-  }
-
-  val testRegistration: UserRegistration = UserRegistration("First", "Last", "test@two.com", "Passw0rd", acceptedTerms = true, ofAge = true)
-
-  "valid user registration" should "return the new uid" in {
-    userDao.storeUserResponse = Future.successful(Right(12))
-
-    service.registerUser(testRegistration).map(errorOrUid => {
-      errorOrUid.isRight shouldBe true
-      errorOrUid.right.get shouldBe 12
-    })
-  }
-
-  "duplicate user registration" should "return Client Error" in {
-    userDao.storeUserResponse = Future.successful(Left(DuplicateEntry()))
-
-    service.registerUser(testRegistration).map(errorOrUid => {
-      errorOrUid.isLeft shouldBe true
-      errorOrUid.left shouldBe ClientError("An account with this email exists.")
-    })
-  }
-
-  "an unknown error" should "be mapped to an Internal Error" in {
-    userDao.storeUserResponse = Future.successful(Left(Other()))
-
-    service.registerUser(testRegistration).map(errorOrUid => {
-      errorOrUid.isLeft shouldBe true
-      errorOrUid.left shouldBe InternalError()
-    })
-  }
-
-  "valid user record" should "be mapped to a user" in {
-    val record = UserRecord(1, Option(2), Option(3), "admin@two.com", "First", "Last", acceptedTerms = true, ofAge = true, null)
-    userDao.getUserResponse = Future.successful(Option(record))
-
-    service.getUser(1).map(_ shouldBe Right(User(1, Option(2), Option(3), "First", "Last")))
-  }
-
-  "empty user record" should "return a NotFound error" in {
-    userDao.getUserResponse = Future.successful(None)
-
-    service.getUser(1).map(_ shouldBe Left(NotFoundError(s"User with UID 1 does not exist.")))
-  }
-
-  "invalid user record" should "return a Client error" in {
-    val record = UserRecord(-1, None, None, "admin@two.com", "First", "Last", acceptedTerms = true, ofAge = true, null)
-    userDao.getUserResponse = Future.successful(Option(record))
-    val expectedError = ClientError("User record malformed. Reason: UID must be greater than zero.")
-
-    service.getUser(1).map(_ shouldBe Left(expectedError))
-  }
-
+  def randomEmail(): String =
+    "quillCoupleTest-" + Random.alphanumeric.take(10).mkString + "@twotest.com"
 }

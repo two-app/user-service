@@ -2,61 +2,94 @@ package user
 
 import java.util.Date
 
+import cats.data.EitherT
 import cats.data.OptionT
-import com.github.mauricio.async.db.mysql.exceptions.MySQLException
 import com.typesafe.scalalogging.Logger
 import db.DatabaseError
-import db.ctx._
+import db.DuplicateRecordError
+import db.DateTimeModule._
+import doobie.free.connection.ConnectionIO
+import doobie.implicits._
+import doobie.util.transactor.Transactor
+import cats.effect.Bracket
+import cats.implicits._
+import java.sql.SQLException
+import java.time.Instant
 
-import scala.concurrent.ExecutionContext.Implicits.{global => ec}
-import scala.concurrent.Future
+trait UserDao[F[_]] {
+  def storeUser(ur: UserRegistration): EitherT[F, DatabaseError, Int]
 
-final case class UserRecord
-(
-  uid: Int,
-  pid: Option[Int],
-  cid: Option[Int],
-  email: String,
-  firstName: String,
-  lastName: String,
-  acceptedTerms: Boolean,
-  ofAge: Boolean,
-  createdAt: Date
+  def getUser(uid: Int): OptionT[F, UserRecord]
+}
+
+class DoobieUserDao[F[_]: Bracket[*[_], Throwable]](
+    val xa: Transactor[F]
+) extends UserDao[F] {
+  val logger: Logger = Logger(classOf[DoobieUserDao[F]])
+
+  override def storeUser(
+      userRegistration: UserRegistration
+  ): EitherT[F, DatabaseError, Int] =
+    EitherT(
+      UserSql
+        .insert(UserRecord.asInsertRecord(userRegistration))
+        .attemptSql
+        .transact(xa)
+    ).leftMap(DatabaseError.fromException)
+
+  override def getUser(uid: Int): OptionT[F, UserRecord] = OptionT(
+    UserSql.select(uid).transact(xa)
+  )
+}
+
+private object UserSql {
+  def insert(ur: UserRecord): ConnectionIO[Int] =
+    sql"""
+         | INSERT INTO user (pid, cid, email, first_name,
+         |                   last_name, accepted_terms,
+         |                   of_age, created_at)
+         | VALUES (${ur.pid}, ${ur.cid}, ${ur.email}, ${ur.firstName},
+         |         ${ur.lastName}, ${ur.acceptedTerms}, ${ur.ofAge},
+         |         ${ur.createdAt})
+         |""".stripMargin.update
+      .withUniqueGeneratedKeys[Int]("uid")
+
+  def select(uid: Int): ConnectionIO[Option[UserRecord]] =
+    sql"""
+         | SELECT uid, pid, cid, email, first_name,
+         |        last_name, accepted_terms,
+         |        of_age, created_at
+         | FROM user
+         | WHERE uid = $uid
+         |""".stripMargin
+      .query[UserRecord]
+      .option
+}
+
+final case class UserRecord(
+    uid: Int,
+    pid: Option[Int],
+    cid: Option[Int],
+    email: String,
+    firstName: String,
+    lastName: String,
+    acceptedTerms: Boolean,
+    ofAge: Boolean,
+    createdAt: Instant
 )
 
 object UserRecord {
   def asInsertRecord(ur: UserRegistration): UserRecord = {
-    new UserRecord(0, None, None, ur.email, ur.firstName, ur.lastName, ur.acceptedTerms, ur.ofAge, new Date())
+    new UserRecord(
+      uid = 0,
+      pid = None,
+      cid = None,
+      email = ur.email,
+      firstName = ur.firstName,
+      lastName = ur.lastName,
+      acceptedTerms = ur.acceptedTerms,
+      ofAge = ur.ofAge,
+      createdAt = Instant.now()
+    )
   }
-}
-
-trait UserDao {
-  def storeUser(ur: UserRegistration): Future[Either[DatabaseError, Int]]
-
-  def getUser(uid: Int): OptionT[Future, UserRecord]
-}
-
-class QuillUserDao extends UserDao {
-  val logger: Logger = Logger(classOf[QuillUserDao])
-
-  override def storeUser(ur: UserRegistration): Future[Either[DatabaseError, Int]] = {
-    logger.info(s"Storing user.")
-    run(quote {
-      querySchema[UserRecord]("user").insert(lift(UserRecord.asInsertRecord(ur))).returningGenerated(_.uid)
-    }).map(Right(_)).recover {
-      case e: MySQLException => Left(DatabaseError.fromException(e))
-      case e: Exception =>
-        logger.error("Unknown Exception", e)
-        Left(DatabaseError.Other())
-    }
-  }
-
-  override def getUser(uid: Int): OptionT[Future, UserRecord] = {
-    logger.info(s"Retrieving user by UID $uid.")
-
-    OptionT(run(quote {
-      querySchema[UserRecord]("user").filter(u => u.uid == lift(uid))
-    }).map(r => r.headOption))
-  }
-
 }

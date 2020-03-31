@@ -5,12 +5,13 @@ import akka.http.scaladsl.model.{HttpRequest, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import authentication.Tokens
+import cats.effect.IO
 import com.typesafe.scalalogging.Logger
 import request.UserContext
 import response.ErrorResponse
 import response.ErrorResponse.{ClientError, NotFoundError}
 
-class UserRoute(userService: UserService) {
+class UserRoute(userService: UserService[IO]) {
   val logger: Logger = Logger(classOf[UserRoute])
 
   val getSelfRoute: Route = path("self") {
@@ -41,17 +42,19 @@ class UserRoute(userService: UserService) {
 
   def registerUser(ur: UserRegistration): Route = {
     logger.info(f"Registering user: {firstName: ${ur.firstName}, lastName: ${ur.lastName}, email: ${ur.email}}")
-    onSuccess(userService.registerUser(ur)) {
-      case Left(e: ErrorResponse) => complete(e.status, e)
+
+    onSuccess(userService.registerUser(ur).value.unsafeToFuture()) {
+      case Left(error: ErrorResponse) => complete(error.status, error)
       case Right(tokens: Tokens) => complete(tokens)
     }
   }
 
   def getSelf(request: HttpRequest): Route = {
     logger.info("GET /self")
+    
     UserContext.from(request).map(u => u.uid).fold(
       e => complete(e.status, e),
-      uid => onSuccess(userService.getUser(uid).value) {
+      uid => onSuccess(userService.getUser(uid).value.unsafeToFuture()) {
         case Left(_: NotFoundError) => complete(StatusCodes.InternalServerError)
         case Left(e: ErrorResponse) => complete(e.status, e)
         case Right(user: User) => complete(user)

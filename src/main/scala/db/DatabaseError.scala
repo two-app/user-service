@@ -1,17 +1,15 @@
 package db
 
-import com.github.mauricio.async.db.mysql.exceptions.MySQLException
+import java.sql.SQLException
 
 trait DatabaseError
+object DuplicateRecordError extends DatabaseError
 
 object DatabaseError {
-  def fromException(e: MySQLException): DatabaseError = {
-    e.errorMessage.errorCode match {
-      case 1062 => DuplicateEntry()
+  def fromException(e: SQLException): DatabaseError = {
+    e.getErrorCode() match {
+      case 1062 => DuplicateRecordError
+      case _ => throw new RuntimeException("Failed to read SQLException", e)
     }
   }
-
-  final case class Other() extends DatabaseError
-
-  final case class DuplicateEntry() extends DatabaseError
 }

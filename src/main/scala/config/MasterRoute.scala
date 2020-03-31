@@ -2,17 +2,19 @@ package config
 
 import akka.http.scaladsl.server.Route
 import authentication.{AuthenticationDao, AuthenticationServiceDao}
-import couple.{CoupleDao, QuillCoupleDao}
+import couple.{CoupleDao, DoobieCoupleDao}
 import partner.{PartnerRoute, PartnerService, PartnerServiceImpl}
 import user._
+import cats.effect.ContextShift
+import doobie.util.ExecutionContexts
+import cats.effect.IO
 
 object MasterRoute {
-  lazy val userRoute: Route = new UserRoute(userService).route
-  lazy val partnerRoute: Route = new PartnerRoute(partnerService).route
+  implicit val cs: ContextShift[IO] =
+    IO.contextShift(ExecutionContexts.synchronous)
 
-  lazy val partnerService: PartnerService = new PartnerServiceImpl(userService, coupleDao, authDao)
-  lazy val userService: UserService = new UserServiceImpl(userDao, authDao)
-  lazy val userDao: UserDao = new QuillUserDao
-  lazy val authDao: AuthenticationDao = new AuthenticationServiceDao
-  lazy val coupleDao: CoupleDao = new QuillCoupleDao
+  lazy val userRoute: Route = new UserRoute(services.userService).route
+  lazy val partnerRoute: Route = new PartnerRoute(services.partnerService).route
+
+  lazy val services: Services[IO] = new Services[IO]()
 }

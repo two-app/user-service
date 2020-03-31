@@ -7,9 +7,9 @@ object FlywayHelper {
 
   private var flyway: Option[Flyway] = None
 
-  def getFlyway: Flyway = {
+  private def getFlyway: Flyway = {
     if (flyway.isEmpty) {
-      val dbUrl: String = ConfigFactory.load().getString("db.flywayUrl")
+      val dbUrl: String = ConfigFactory.load().getString("db.jdbcWithoutSchema")
       val schema: String = ConfigFactory.load().getString("db.schema")
       flyway = Option(Flyway.configure()
         .locations("migration")
@@ -19,5 +19,10 @@ object FlywayHelper {
     }
 
     flyway.get
+  }
+
+  def cleanMigrate(): Unit = {
+    getFlyway.clean()
+    getFlyway.migrate()
   }
 }
