@@ -3,7 +3,7 @@ The Users API provides REST endpoints to create, retrieve, and manipulate users.
 ## Endpoints
 | Verb | Endpoint | Description                     | Input                                  | Output            |
 |------|----------|---------------------------------|----------------------------------------|-------------------|
-| POST | `/self`  | Register a new user.            | [UserRegistration](#User Registration) | [Tokens](#Tokens) |
+| POST | `/self`  | Register a new user.            | [UserRegistration](#User-Registration) | [Tokens](#Tokens) |
 | GET  | `/self`  | Retrieve user from Auth header. |                                        | [User](#User)     |
 
 ## Models
@@ -12,7 +12,7 @@ The Users API provides REST endpoints to create, retrieve, and manipulate users.
 |----------------|----------------|--------------------------------------|
 | firstName      | `string`       | length >= 2                          |
 | lastName       | `string`       | length >= 2                          |
-| email          | `string`       | https://stackoverflow.com/a/32445372 |
+| email          | `string`       | unique && https://stackoverflow.com/a/32445372 |
 | password       | `string`       | length >= 6                          |
 | acceptedTerms  | `bool`         | true                              |
 | ofAge          | `bool`         | true                              |
@@ -27,9 +27,10 @@ The Users API provides REST endpoints to create, retrieve, and manipulate users.
 	"password": "SomethingStrong",
 	"acceptedTerms": true,
 	"ofAge": true,
-	"receivesEmails": false // can be omitted
+	"receivesEmails": false
 }
 ```
+In this example, `receiveEmails` can simply be omitted as it is `Optional`.
 
 ### User
 | Attribute | Type          |
