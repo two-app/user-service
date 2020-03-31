@@ -5,7 +5,7 @@ import cats.data.EitherT
 import cats.implicits._
 import couple.{CoupleDao, CoupleRecord}
 import org.scalatest.BeforeAndAfterEach
-import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import response.ErrorResponse
 import response.ErrorResponse.{ClientError, NotFoundError}
@@ -14,58 +14,122 @@ import user.{User, UserRegistration, UserService}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.{global => ec}
 import scala.concurrent.Future
+import db.FlywayHelper
+import cats.effect.IO
+import config.MasterRoute
+import authentication.AuthenticationDaoStub
+import scala.util.Random
+import request.UserContext
+import user.UserServiceImpl
 
-class PartnerServiceImplTest extends AnyFlatSpec with Matchers with BeforeAndAfterEach {
+class PartnerServiceImplTest
+    extends AnyFunSpec
+    with Matchers
+    with BeforeAndAfterEach {
 
-  // class UserServiceStub extends UserService {
-  //   val userMap: mutable.Map[Int, User] = new mutable.HashMap[Int, User]
+  val userService: UserService[IO] = new UserServiceImpl[IO](
+    MasterRoute.services.userDao,
+    new AuthenticationDaoStub()
+  )
 
-  //   override def registerUser(ur: UserRegistration): Future[Either[ErrorResponse, Tokens]] = ???
+  val partnerService: PartnerService[IO] = new PartnerServiceImpl[IO](
+    userService,
+    MasterRoute.services.coupleDao,
+    new AuthenticationDaoStub()
+  )
 
-  //   override def getUser(uid: Int): EitherT[Future, ErrorResponse, User] = userMap.get(uid)
-  //     .toRight[ErrorResponse](NotFoundError(""))
-  //     .toEitherT[Future]
-  // }
+  override def beforeEach(): Unit = FlywayHelper.cleanMigrate()
 
-  // class CoupleDaoStub extends CoupleDao {
-  //   override def storeCouple(uid: Int, pid: Int): Future[Int] = Future.successful(5)
+  describe("connectUsers") {
+    def register(registration: UserRegistration): Int = {
+      userService
+        .registerUser(registration)
+        .value
+        .unsafeRunSync()
+        .map(tokens => UserContext.from(tokens.accessToken).right.get)
+        .right
+        .get
+        .uid
+    }
 
-  //   override def getCouple(cid: Int): Future[Option[CoupleRecord]] = ???
+    def connect(uid: Int, pid: Int): Tokens = {
+      partnerService
+        .connectUsers(uid, pid)
+        .value
+        .unsafeRunSync()
+        .right
+        .get
+    }
 
-  //   override def connectUserToPartner(uid: Int, pid: Int, cid: Int): Future[Unit] = Future.successful()
-  // }
+    it("should generate tokens for a valid partnership") {
+      val userOneId: Int = register(newUser())
+      val userTwoId: Int = register(newUser())
 
-  // class AuthenticationDaoStub extends AuthenticationDao {
-  //   override def storeCredentials(uid: Int, password: String): Future[Tokens] = ???
+      val updatedTokens: Tokens = connect(userOneId, userTwoId)
 
-  //   override def createTokens(uid: Int, pid: Option[Int], cid: Option[Int]): Future[Tokens] = Future.successful(stubTokens)
-  // }
+      val newUserContext: UserContext =
+        UserContext.from(updatedTokens.accessToken).right.get
 
-  // var partnerService: PartnerService = _
-  // var userServiceStub: UserServiceStub = _
-  // val stubTokens: Tokens = Tokens("testAccessToken", "testRefreshToken")
+      newUserContext.uid shouldBe userOneId
+      newUserContext.pid shouldBe Option(userTwoId)
+      newUserContext.cid shouldBe Option(1)
+    }
 
-  // override def beforeEach(): Unit = {
-  //   userServiceStub = new UserServiceStub()
-  //   partnerService = new PartnerServiceImpl(userServiceStub, new CoupleDaoStub(), new AuthenticationDaoStub())
-  // }
+    it("should return a Not Found error if the partner does not exist") {
+      val userOneId: Int = register(newUser())
 
-  // "if the partnership is valid it" should "create tokens" in {
-  //   userServiceStub.userMap.put(1, User(1, None, None, "User", "Last"))
-  //   userServiceStub.userMap.put(10, User(10, None, None, "Partner", "Last"))
+      val errorOrTokens: Either[ErrorResponse, Tokens] = partnerService
+        .connectUsers(userOneId, 100)
+        .value
+        .unsafeRunSync()
 
-  //   partnerService.connectUsers(1, 10).map(errorOrTokens => {
-  //     errorOrTokens shouldBe Right(stubTokens)
-  //   })
-  // }
+      errorOrTokens shouldBe Left(NotFoundError("Partner does not exist."))
+    }
 
-  // "if the user is already connected it" should "return a client error" in {
-  //   userServiceStub.userMap.put(1, User(1, Option(2), Option(3), "First", "Last"))
+    it("should return a client error if the user is already connected") {
+      val userOneId: Int = register(newUser())
+      val userTwoId: Int = register(newUser())
 
-  //   partnerService.connectUsers(1, 10).map(errorOrTokens => {
-  //     errorOrTokens shouldBe Left(ClientError("User already has a partner."))
-  //   })
-  // }
+      connect(userOneId, userTwoId)
+
+      val userThreeId: Int = register(newUser())
+      val errorOrTokens: Either[ErrorResponse, Tokens] = partnerService
+        .connectUsers(userOneId, userThreeId)
+        .value
+        .unsafeRunSync()
+
+      errorOrTokens shouldBe Left(ClientError("User already has a partner."))
+    }
+
+    it("should return a client error if the partner is already connected") {
+      val userOneId: Int = register(newUser())
+      val userTwoId: Int = register(newUser())
+
+      connect(userOneId, userTwoId)
+
+      val userThreeId: Int = register(newUser())
+      val errorOrTokens: Either[ErrorResponse, Tokens] = partnerService
+        .connectUsers(userThreeId, userOneId)
+        .value
+        .unsafeRunSync()
+
+      errorOrTokens shouldBe Left(ClientError("Partner already has a partner."))
+    }
+  }
+
+  def newUser(): UserRegistration = UserRegistration(
+    firstName = "First",
+    lastName = "Last",
+    email = randomEmail(),
+    password = "StrongPassword",
+    acceptedTerms = true,
+    ofAge = true
+  )
+
+  def randomEmail(): String =
+    "userServiceWorkflowTest-" + Random.alphanumeric
+      .take(10)
+      .mkString + "@twotest.com"
 
   // "if the partner does not exist it" should "return a not found error" in {
   //   userServiceStub.userMap.put(1, User(1, None, None, "First", "Last"))

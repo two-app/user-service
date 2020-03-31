@@ -20,8 +20,10 @@ import config.MasterRoute
 import response.ErrorResponse
 import response.ErrorResponse.AuthorizationError
 import response.ErrorResponse.ClientError
+import org.scalatest.BeforeAndAfterEach
+import db.FlywayHelper
 
-class UserRouteTest extends AsyncFunSpec with Matchers with ScalatestRouteTest {
+class UserRouteTest extends AsyncFunSpec with Matchers with ScalatestRouteTest with BeforeAndAfterEach {
 
   val route: Route = new UserRoute(
     new UserServiceImpl(
@@ -29,6 +31,8 @@ class UserRouteTest extends AsyncFunSpec with Matchers with ScalatestRouteTest {
       new AuthenticationDaoStub()
     )
   ).route
+
+  override def beforeEach(): Unit = FlywayHelper.cleanMigrate()
 
   def authHeader(token: String): List[RawHeader] =
     List(RawHeader("Authorization", s"Bearer $token"))
@@ -44,7 +48,9 @@ class UserRouteTest extends AsyncFunSpec with Matchers with ScalatestRouteTest {
         response.status shouldBe StatusCodes.OK
 
         Post("/self", registration) ~> route ~> check {
-          entityAs[ErrorResponse] shouldBe ClientError("An account with this email exists.")
+          entityAs[ErrorResponse] shouldBe ClientError(
+            "An account with this email exists."
+          )
         }
       }
     }
@@ -92,17 +98,6 @@ class UserRouteTest extends AsyncFunSpec with Matchers with ScalatestRouteTest {
     }
   }
 
-  // "POST /self with duplicate email" should "return a bad request" in {
-  //   val email = randomEmail()
-  //   registerUser(email) ~> route ~> check {
-  //     response.status shouldEqual StatusCodes.OK
-  //     registerUser(email) ~> route ~> check {
-  //       response.status shouldEqual StatusCodes.BadRequest
-  //       responseAs[String] shouldEqual """{"status":"400 Bad Request","reason":"An account with this email exists."}"""
-  //     }
-  //   }
-  // }
-
   def newUser(): UserRegistration = UserRegistration(
     firstName = "First",
     lastName = "Last",
@@ -111,12 +106,6 @@ class UserRouteTest extends AsyncFunSpec with Matchers with ScalatestRouteTest {
     acceptedTerms = true,
     ofAge = true
   )
-
-  def registerUser(email: String): HttpRequest = {
-    val userRegistration =
-      s"""{"firstName": "first", "lastName": "last", "email": "$email", "password": "strongpass", "acceptedTerms": true, "ofAge": true}"""
-    Post("/self").withEntity(ContentTypes.`application/json`, userRegistration)
-  }
 
   def randomEmail(): String =
     "userServiceWorkflowTest-" + Random.alphanumeric

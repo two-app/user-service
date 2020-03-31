@@ -10,11 +10,13 @@ import doobie.implicits._
 import doobie.util.transactor.Transactor
 import doobie.util.update.Update0
 import java.time.Instant
+import cats.Monad
 
 final case class CoupleRecord(cid: Int, uid: Int, pid: Int, created_at: Instant)
 
 object CoupleRecord {
-  def from(uid: Int, pid: Int): CoupleRecord = CoupleRecord(0, uid, pid, Instant.now())
+  def from(uid: Int, pid: Int): CoupleRecord =
+    CoupleRecord(0, uid, pid, Instant.now())
 }
 
 trait CoupleDao[F[_]] {
@@ -37,8 +39,9 @@ class DoobieCoupleDao[F[_]: Bracket[*[_], Throwable]](
     CoupleSql.select(cid).transact(xa)
   )
 
-  override def connectUserToPartner(uid: Int, pid: Int, cid: Int): F[Unit] =
+  override def connectUserToPartner(uid: Int, pid: Int, cid: Int): F[Unit] = {
     connectionTransaction(uid, pid).transact(xa)
+  }
 
   private def connectionTransaction(uid: Int, pid: Int): ConnectionIO[Unit] =
     for {
