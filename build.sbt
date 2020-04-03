@@ -2,7 +2,7 @@ name := "user-service"
 
 version := "0.1"
 
-scalaVersion := "2.12.10"
+scalaVersion := "2.13.1"
 
 /** Akka */
 libraryDependencies ++= Seq(
@@ -45,6 +45,5 @@ flywaySchemas += "users"
 parallelExecution in IntegrationTest := false
 parallelExecution in Test := false
 
-scalacOptions += "-Ypartial-unification"
 libraryDependencies += "org.typelevel" %% "cats-core" % "2.0.0"
 addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.0" cross CrossVersion.full)

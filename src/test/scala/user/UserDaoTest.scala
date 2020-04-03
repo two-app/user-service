@@ -9,7 +9,7 @@ import doobie.util.transactor.Transactor.Aux
 import db._
 import java.time.Instant
 
-class QuillUserDaoTest
+class UserDaoTest
     extends AsyncFunSpec
     with Matchers
     with BeforeAndAfterEach {
