@@ -40,13 +40,13 @@ class DoobieCoupleDao[F[_]: Bracket[*[_], Throwable]](
   )
 
   override def connectUserToPartner(uid: Int, pid: Int, cid: Int): F[Unit] = {
-    connectionTransaction(uid, pid, cid).transact(xa)
+    connectionTransaction(uid, pid).transact(xa)
   }
 
-  private def connectionTransaction(uid: Int, pid: Int, cid: Int): ConnectionIO[Unit] =
+  private def connectionTransaction(uid: Int, pid: Int): ConnectionIO[Unit] =
     for {
-      updateUser <- CoupleSql.updateUserPartnerId(uid, pid, cid)
-      updatePartner <- CoupleSql.updateUserPartnerId(pid, uid, cid)
+      updateUser <- CoupleSql.updateUserPartnerId(uid, pid)
+      updatePartner <- CoupleSql.updateUserPartnerId(pid, uid)
     } yield ()
 }
 
@@ -64,10 +64,10 @@ object CoupleSql {
          | WHERE cid = $cid
          |""".stripMargin.query[CoupleRecord].option
 
-  def updateUserPartnerId(uid: Int, pid: Int, cid: Int): ConnectionIO[Int] =
+  def updateUserPartnerId(uid: Int, pid: Int): ConnectionIO[Int] =
     sql"""
          | UPDATE user
-         | SET pid = $pid, cid = $cid
+         | SET pid = $pid
          | WHERE uid = $uid
          |""".stripMargin.update.run
 }

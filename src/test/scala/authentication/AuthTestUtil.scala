@@ -17,20 +17,11 @@ trait AuthTestArbitraries {
       JwtClaim(content = s"""{"uid": $uid, "connectCode": "$connectCode"}""")
   )
 
-  def authHeader(jwt: String): RawHeader =
-    RawHeader("Authorization", s"Bearer $jwt")
+  def authHeader(jwt: String): RawHeader = RawHeader("Authorization", s"Bearer $jwt")
 
-  def extractContext(accessToken: String): UserContext =
-    UserContext.from(accessToken).right.get
+  def extractContext(accessToken: String): UserContext = UserContext.from(accessToken).right.get
 
-  def connectCodeFromId(id: Int): String =
-    new Hashids(Config.getProperty("hashids.salt"), 6).encode(id)
-
-  def connectCodeFromTokens(userTokens: Tokens): String =
-    connectCodeFromId(
-      UserContext.from(userTokens.accessToken).right.get.uid
-    )
-
+  def connectCodeFromId(id: Int): String = new Hashids(Config.getProperty("hashids.salt"), 6).encode(id)
 }
 
 object AuthTestUtil {
@@ -43,6 +34,5 @@ object AuthTestUtil {
       JwtClaim(content = s"""{"uid": $uid, "connectCode": "$connectCode"}""")
   )
 
-  def authHeader(jwt: String): RawHeader =
-    RawHeader("Authorization", s"Bearer $jwt")
+  def authHeader(jwt: String): RawHeader = RawHeader("Authorization", s"Bearer $jwt")
 }
