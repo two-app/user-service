@@ -43,7 +43,7 @@ class DoobieCoupleDaoTest
   }
 
   describe("connectUserToPartner") {
-    it("should update both users PID") {
+    it("should update both users PID and CID") {
       val uid = userDao.storeUser(newUser()).value.unsafeRunSync().right.get
       val pid = userDao.storeUser(newUser()).value.unsafeRunSync().right.get
       val cid = coupleDao.storeCouple(uid, pid).unsafeRunSync()
@@ -55,6 +55,9 @@ class DoobieCoupleDaoTest
 
       user.pid.get shouldBe partner.uid
       partner.pid.get shouldBe user.uid
+      
+      user.cid shouldBe Option(cid)
+      partner.cid shouldBe Option(cid)
     }
   }
 

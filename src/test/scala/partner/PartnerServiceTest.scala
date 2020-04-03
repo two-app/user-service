@@ -21,11 +21,13 @@ import authentication.AuthenticationDaoStub
 import scala.util.Random
 import request.UserContext
 import user.UserServiceImpl
+import user.UserTestArbitraries
 
-class PartnerServiceImplTest
+class PartnerServiceTest
     extends AnyFunSpec
     with Matchers
-    with BeforeAndAfterEach {
+    with BeforeAndAfterEach
+    with UserTestArbitraries {
 
   val userService: UserService[IO] = new UserServiceImpl[IO](
     MasterRoute.services.userDao,
@@ -35,40 +37,36 @@ class PartnerServiceImplTest
   val partnerService: PartnerService[IO] = new PartnerServiceImpl[IO](
     userService,
     MasterRoute.services.coupleDao,
-    new AuthenticationDaoStub()
+    new AuthenticationDaoStub(),
+    MasterRoute.services.partnerDao
   )
 
   override def beforeEach(): Unit = FlywayHelper.cleanMigrate()
 
+  def registerUser(): UserContext =
+    userService
+      .registerUser(randomUserRegistration())
+      .value
+      .unsafeRunSync()
+      .map(tokens => UserContext.from(tokens.accessToken).right.get)
+      .right
+      .get
+
+  def connect(uid: Int, pid: Int): UserContext =
+    partnerService
+      .connectUsers(uid, pid)
+      .value
+      .unsafeRunSync()
+      .map(tokens => UserContext.from(tokens.accessToken).right.get)
+      .right
+      .get
+
   describe("connectUsers") {
-    def register(registration: UserRegistration): Int = {
-      userService
-        .registerUser(registration)
-        .value
-        .unsafeRunSync()
-        .map(tokens => UserContext.from(tokens.accessToken).right.get)
-        .right
-        .get
-        .uid
-    }
-
-    def connect(uid: Int, pid: Int): Tokens = {
-      partnerService
-        .connectUsers(uid, pid)
-        .value
-        .unsafeRunSync()
-        .right
-        .get
-    }
-
     it("should generate tokens for a valid partnership") {
-      val userOneId: Int = register(newUser())
-      val userTwoId: Int = register(newUser())
+      val userOneId: Int = registerUser().uid
+      val userTwoId: Int = registerUser().uid
 
-      val updatedTokens: Tokens = connect(userOneId, userTwoId)
-
-      val newUserContext: UserContext =
-        UserContext.from(updatedTokens.accessToken).right.get
+      val newUserContext: UserContext = connect(userOneId, userTwoId)
 
       newUserContext.uid shouldBe userOneId
       newUserContext.pid shouldBe Option(userTwoId)
@@ -76,7 +74,7 @@ class PartnerServiceImplTest
     }
 
     it("should return a Not Found error if the partner does not exist") {
-      val userOneId: Int = register(newUser())
+      val userOneId: Int = registerUser().uid
 
       val errorOrTokens: Either[ErrorResponse, Tokens] = partnerService
         .connectUsers(userOneId, 100)
@@ -87,12 +85,12 @@ class PartnerServiceImplTest
     }
 
     it("should return a client error if the user is already connected") {
-      val userOneId: Int = register(newUser())
-      val userTwoId: Int = register(newUser())
+      val userOneId: Int = registerUser().uid
+      val userTwoId: Int = registerUser().uid
 
       connect(userOneId, userTwoId)
 
-      val userThreeId: Int = register(newUser())
+      val userThreeId: Int = registerUser().uid
       val errorOrTokens: Either[ErrorResponse, Tokens] = partnerService
         .connectUsers(userOneId, userThreeId)
         .value
@@ -102,12 +100,12 @@ class PartnerServiceImplTest
     }
 
     it("should return a client error if the partner is already connected") {
-      val userOneId: Int = register(newUser())
-      val userTwoId: Int = register(newUser())
+      val userOneId: Int = registerUser().uid
+      val userTwoId: Int = registerUser().uid
 
       connect(userOneId, userTwoId)
 
-      val userThreeId: Int = register(newUser())
+      val userThreeId: Int = registerUser().uid
       val errorOrTokens: Either[ErrorResponse, Tokens] = partnerService
         .connectUsers(userThreeId, userOneId)
         .value
@@ -117,35 +115,32 @@ class PartnerServiceImplTest
     }
   }
 
-  def newUser(): UserRegistration = UserRegistration(
-    firstName = "First",
-    lastName = "Last",
-    email = randomEmail(),
-    password = "StrongPassword",
-    acceptedTerms = true,
-    ofAge = true
-  )
+  describe("getPartner") {
+    describe("Connected user") {
+      it("should return the partner") {
+        val user = registerUser()
+        val partner = registerUser()
 
-  def randomEmail(): String =
-    "userServiceWorkflowTest-" + Random.alphanumeric
-      .take(10)
-      .mkString + "@twotest.com"
+        val cid = connect(user.uid, partner.uid).cid.get
 
-  // "if the partner does not exist it" should "return a not found error" in {
-  //   userServiceStub.userMap.put(1, User(1, None, None, "First", "Last"))
+        val maybePartner =
+          partnerService.getPartner(user.uid).value.unsafeRunSync()
 
-  //   partnerService.connectUsers(1, 10).map(errorOrTokens => {
-  //     errorOrTokens shouldBe Left(NotFoundError(""))
-  //   })
-  // }
+        maybePartner shouldBe Some(
+          User(partner.uid, Option(user.uid), Option(cid), "First", "Last")
+        )
+      }
+    }
 
-  // "if the partner already has a partner it" should "return a client error" in {
-  //   userServiceStub.userMap.put(1, User(1, None, None, "User", "Last"))
-  //   userServiceStub.userMap.put(10, User(10, Option(2), Option(3), "Partner", "Last"))
+    describe("Unconnected user") {
+      it("should return None") {
+        val user = registerUser()
 
-  //   partnerService.connectUsers(1, 10).map(errorOrTokens => {
-  //     errorOrTokens shouldBe Left(ClientError("Partner already has a partner."))
-  //   })
-  // }
+        val maybePartner =
+          partnerService.getPartner(user.uid).value.unsafeRunSync()
 
+        maybePartner shouldBe None
+      }
+    }
+  }
 }
