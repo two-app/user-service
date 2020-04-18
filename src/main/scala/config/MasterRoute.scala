@@ -13,7 +13,7 @@ object MasterRoute {
   implicit val cs: ContextShift[IO] =
     IO.contextShift(ExecutionContexts.synchronous)
 
-  lazy val userRoute: Route = new UserRoute(services.userService).route
+  lazy val userRoute: Route = new SelfRoute(services.userService).route
   lazy val partnerRoute: Route = new PartnerRoute(services.partnerService).route
 
   lazy val services: Services[IO] = new Services[IO]()

@@ -11,8 +11,8 @@ import request.UserContext
 import response.ErrorResponse
 import response.ErrorResponse.{ClientError, NotFoundError}
 
-class UserRoute(userService: UserService[IO]) {
-  val logger: Logger = Logger(classOf[UserRoute])
+class SelfRoute(userService: UserService[IO]) {
+  val logger: Logger = Logger(classOf[SelfRoute])
 
   val getSelfRoute: Route = path("self") {
     get {

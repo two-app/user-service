@@ -23,9 +23,9 @@ import response.ErrorResponse.ClientError
 import org.scalatest.BeforeAndAfterEach
 import db.FlywayHelper
 
-class UserRouteTest extends AsyncFunSpec with Matchers with ScalatestRouteTest with BeforeAndAfterEach {
+class SelfRouteTest extends AsyncFunSpec with Matchers with ScalatestRouteTest with BeforeAndAfterEach {
 
-  val route: Route = new UserRoute(
+  val route: Route = new SelfRoute(
     new UserServiceImpl(
       MasterRoute.services.userDao,
       new AuthenticationDaoStub()
