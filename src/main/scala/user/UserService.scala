@@ -22,6 +22,8 @@ trait UserService[F[_]] {
   def registerUser(ur: UserRegistration): EitherT[F, ErrorResponse, Tokens]
 
   def getUser(uid: Int): EitherT[F, ErrorResponse, User]
+
+  def getUser(email: String): EitherT[F, ErrorResponse, User]
 }
 
 class UserServiceImpl[F[_]: Monad](userDao: UserDao[F], authDao: AuthenticationDao[F]) extends UserService[F] {
@@ -45,4 +47,6 @@ class UserServiceImpl[F[_]: Monad](userDao: UserDao[F], authDao: AuthenticationD
         .toEitherT[F]
     } yield user
   }
+
+  override def getUser(email: String): EitherT[F, ErrorResponse, User] = ???
 }

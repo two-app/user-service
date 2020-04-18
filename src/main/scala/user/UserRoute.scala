@@ -4,6 +4,8 @@ import request.RouteDispatcher
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import cats.effect.IO
+import cats.data.EitherT
+import response.ErrorResponse
 
 class UserRouteDispatcher(userService: UserService[IO]) extends RouteDispatcher {
 
@@ -25,5 +27,7 @@ class UserRouteDispatcher(userService: UserService[IO]) extends RouteDispatcher 
 }
 
 class UserRoute[F[_]](userService: UserService[F]) {
+
+  def getUser(email: String): EitherT[F, ErrorResponse, User] = ???
 
 }

@@ -15,11 +15,14 @@ import cats.effect.Bracket
 import cats.implicits._
 import java.sql.SQLException
 import java.time.Instant
+import doobie.util.fragment.Fragment
 
 trait UserDao[F[_]] {
   def storeUser(ur: UserRegistration): EitherT[F, DatabaseError, Int]
 
   def getUser(uid: Int): OptionT[F, UserRecord]
+
+  def getUser(email: String): OptionT[F, UserRecord]
 }
 
 class DoobieUserDao[F[_]: Bracket[*[_], Throwable]](
@@ -40,6 +43,10 @@ class DoobieUserDao[F[_]: Bracket[*[_], Throwable]](
   override def getUser(uid: Int): OptionT[F, UserRecord] = OptionT(
     UserSql.select(uid).transact(xa)
   )
+
+  override def getUser(email: String): OptionT[F, UserRecord] = OptionT(
+    UserSql.select(email).transact(xa)
+  )
 }
 
 private object UserSql {
@@ -55,15 +62,18 @@ private object UserSql {
       .withUniqueGeneratedKeys[Int]("uid")
 
   def select(uid: Int): ConnectionIO[Option[UserRecord]] =
+    selectWhereSQL(fr"WHERE uid = $uid").query[UserRecord].option
+
+  def select(email: String): ConnectionIO[Option[UserRecord]] =
+    selectWhereSQL(fr"WHERE email = $email").query[UserRecord].option
+
+  def selectWhereSQL(where: Fragment): Fragment =
     sql"""
          | SELECT uid, pid, cid, email, first_name,
          |        last_name, accepted_terms,
          |        of_age, created_at
          | FROM user
-         | WHERE uid = $uid
-         |""".stripMargin
-      .query[UserRecord]
-      .option
+         |""".stripMargin ++ where
 }
 
 final case class UserRecord(

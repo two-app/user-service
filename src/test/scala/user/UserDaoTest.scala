@@ -9,10 +9,7 @@ import doobie.util.transactor.Transactor.Aux
 import db._
 import java.time.Instant
 
-class UserDaoTest
-    extends AsyncFunSpec
-    with Matchers
-    with BeforeAndAfterEach {
+class UserDaoTest extends AsyncFunSpec with Matchers with BeforeAndAfterEach {
 
   val xa: Aux[IO, Unit] = TransactorUtil.transactor()
   val userDao: UserDao[IO] = new DoobieUserDao[IO](xa)
@@ -62,6 +59,29 @@ class UserDaoTest
       storedUser.acceptedTerms shouldBe true
       storedUser.ofAge shouldBe true
     }
+
+    it("should retrieve by uid") {
+      val registration: UserRegistration = newUserRegistration("user@two.com")
+
+      val uid = userDao.storeUser(registration).value.unsafeRunSync().right.get
+      val storedUser: UserRecord =
+        userDao.getUser(uid).value.unsafeRunSync().get
+
+      storedUser.uid shouldBe uid
+      storedUser.email shouldBe registration.email
+    }
+
+    it("should retrieve by email") {
+      val registration: UserRegistration = newUserRegistration("user@two.com")
+
+      val uid = userDao.storeUser(registration).value.unsafeRunSync().right.get
+      val storedUser: UserRecord =
+        userDao.getUser(registration.email).value.unsafeRunSync().get
+
+      storedUser.uid shouldBe uid
+      storedUser.email shouldBe registration.email
+    }
+
   }
 
   def newUserRegistration(email: String): UserRegistration = UserRegistration(
