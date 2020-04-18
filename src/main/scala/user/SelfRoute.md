@@ -1,5 +1,6 @@
-# Users API
-The Users API provides REST endpoints to create, retrieve, and manipulate users.
+# Self API
+The self API provides REST endpoints to register and retrieve ones self.
+
 ## Endpoints
 | Verb | Endpoint | Description                     | Input                                  | Output            |
 |------|----------|---------------------------------|----------------------------------------|-------------------|
