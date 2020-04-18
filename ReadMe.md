@@ -53,7 +53,7 @@ A Scala implementation of the User Service:
 ## Usage
 ### Public (Gateway Enabled)
 - Creating and Retrieving Self [/self](src/main/scala/user/SelfRoute.md)
-- Connecting with Partner and retrieving Partner [/partner](src/main/scala/partner/PartnerRoute.scala)
+- Connecting with Partner and retrieving Partner [/partner](src/main/scala/partner/PartnerRoute.md)
 
 ### Private (Internal)
 - Retrieving User by Email [/user](src/main/scala/user/UserRoute.md)
