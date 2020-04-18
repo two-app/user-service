@@ -4,7 +4,7 @@ The self API provides REST endpoints to register and retrieve ones self.
 ## Endpoints
 | Verb | Endpoint | Description                     | Input                                  | Output            |
 |------|----------|---------------------------------|----------------------------------------|-------------------|
-| POST | `/self`  | Register a new user.            | [UserRegistration](#User-Registration) | [Tokens](#Tokens) |
+| POST | `/self`  | Register a new user.            | [UserRegistration](#User-Registration) | [Tokens](#Tokens), ClientError |
 | GET  | `/self`  | Retrieve user from Auth header. |                                        | [User](#User)     |
 
 ## Models
