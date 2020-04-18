@@ -9,6 +9,7 @@ import response.ErrorResponse
 import response.ErrorResponse.{ClientError, InternalError, NotFoundError}
 import cats.Functor
 import cats.Monad
+import cats.data.OptionT
 
 object UserRecordMapper extends RecordMapper[UserRecord, Either[ModelValidationError, User]] {
   override def from(record: UserRecord): Either[ModelValidationError, User] = {
@@ -40,13 +41,24 @@ class UserServiceImpl[F[_]: Monad](userDao: UserDao[F], authDao: AuthenticationD
 
   override def getUser(uid: Int): EitherT[F, ErrorResponse, User] = {
     logger.info(s"Retrieving user by UID $uid.")
+    this.handleMissingUser(
+      userDao.getUser(uid)
+    )
+  }
+
+  override def getUser(email: String): EitherT[F, ErrorResponse, User] = {
+    logger.info(s"Retrieving user by email $email.")
+    this.handleMissingUser(
+      userDao.getUser(email)
+    )
+  }
+
+  def handleMissingUser(maybeUser: OptionT[F, UserRecord]): EitherT[F, ErrorResponse, User] = {
     for {
-      record <- userDao.getUser(uid).toRight(NotFoundError(s"User with UID $uid does not exist."))
+      record <- maybeUser.toRight(NotFoundError(s"User does not exist."))
       user <- UserRecordMapper.from(record)
         .leftMap[ErrorResponse](e => ClientError(s"User record malformed. Reason: ${e.reason}"))
         .toEitherT[F]
     } yield user
   }
-
-  override def getUser(email: String): EitherT[F, ErrorResponse, User] = ???
 }

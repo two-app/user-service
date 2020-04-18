@@ -73,7 +73,7 @@ class UserRecordMapperTest extends AnyFlatSpec with Matchers {
 }
 
 class UserServiceTest extends AnyFunSpec with Matchers with BeforeAndAfterEach {
-  
+
   var userService: UserService[IO] = new UserServiceImpl[IO](
     MasterRoute.services.userDao,
     new AuthenticationDaoStub[IO]()
@@ -108,28 +108,58 @@ class UserServiceTest extends AnyFunSpec with Matchers with BeforeAndAfterEach {
   }
 
   describe("getUser") {
-    it("should return a not found error for a non-existent uid") {
-      val uid = 10
+    describe("with uid") {
+      it("should return a not found error for a non-existent uid") {
+        val uid = 10
 
-      val errorOrUser: Either[ErrorResponse, User] =
-        userService.getUser(uid).value.unsafeRunSync()
+        val errorOrUser: Either[ErrorResponse, User] =
+          userService.getUser(uid).value.unsafeRunSync()
 
-      errorOrUser shouldBe Left(
-        NotFoundError(s"User with UID $uid does not exist.")
-      )
+        errorOrUser shouldBe Left(
+          NotFoundError(s"User does not exist.")
+        )
+      }
+
+      it("should return a user with the registration details") {
+        val registration: UserRegistration = newUser()
+        val tokens: Tokens =
+          userService.registerUser(registration).value.unsafeRunSync().right.get
+        val userContext: UserContext =
+          UserContext.from(tokens.accessToken).right.get
+
+        val user: User =
+          userService.getUser(userContext.uid).value.unsafeRunSync().right.get
+
+        user.firstName shouldBe registration.firstName
+        user.lastName shouldBe registration.lastName
+        user.pid shouldBe None
+        user.cid shouldBe None
+      }
     }
 
-    it("should return a user with the registration details") {
-      val registration: UserRegistration = newUser()
-      val tokens: Tokens =
-        userService.registerUser(registration).value.unsafeRunSync().right.get
-      val userContext: UserContext = UserContext.from(tokens.accessToken).right.get
+    describe("by email") {
+      it("should return a not found error for a non-existent uid") {
+        val errorOrUser: Either[ErrorResponse, User] =
+          userService.getUser("unknown@email.com").value.unsafeRunSync()
 
-      val user: User = userService.getUser(userContext.uid).value.unsafeRunSync().right.get
-      user.firstName shouldBe registration.firstName
-      user.lastName shouldBe registration.lastName
-      user.pid shouldBe None
-      user.cid shouldBe None
+        errorOrUser shouldBe Left(
+          NotFoundError(s"User does not exist.")
+        )
+      }
+
+      it("should return a user with the registration details") {
+        val registration: UserRegistration = newUser()
+        userService.registerUser(registration).value.unsafeRunSync().right.get
+
+        val email: String = registration.email
+        val user: User =
+          userService.getUser(email).value.unsafeRunSync().right.get
+
+        user.firstName shouldBe registration.firstName
+        user.lastName shouldBe registration.lastName
+        user.pid shouldBe None
+        user.cid shouldBe None
+      }
     }
   }
 
