@@ -160,6 +160,15 @@ class UserServiceTest extends AnyFunSpec with Matchers with BeforeAndAfterEach {
         user.pid shouldBe None
         user.cid shouldBe None
       }
+
+      it("should return a client error for a malformed email") {
+        val malformed_email: String = "no-at-symbolATgmail.com"
+
+        val maybeUser: Either[ErrorResponse, User] =
+          userService.getUser(malformed_email).value.unsafeRunSync()
+
+        maybeUser shouldBe Left(ClientError("Badly formatted email."))
+      }
     }
   }
 

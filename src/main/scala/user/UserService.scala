@@ -10,6 +10,7 @@ import response.ErrorResponse.{ClientError, InternalError, NotFoundError}
 import cats.Functor
 import cats.Monad
 import cats.data.OptionT
+import cats.Applicative
 
 object UserRecordMapper extends RecordMapper[UserRecord, Either[ModelValidationError, User]] {
   override def from(record: UserRecord): Either[ModelValidationError, User] = {
@@ -48,9 +49,11 @@ class UserServiceImpl[F[_]: Monad](userDao: UserDao[F], authDao: AuthenticationD
 
   override def getUser(email: String): EitherT[F, ErrorResponse, User] = {
     logger.info(s"Retrieving user by email $email.")
-    this.handleMissingUser(
-      userDao.getUser(email)
-    )
+    if (EmailValidator.isValid(email)) {
+      handleMissingUser(userDao.getUser(email))
+    } else {
+      EitherT.leftT(ClientError("Badly formatted email."))
+    }
   }
 
   def handleMissingUser(maybeUser: OptionT[F, UserRecord]): EitherT[F, ErrorResponse, User] = {
