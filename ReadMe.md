@@ -52,15 +52,7 @@ A Scala implementation of the User Service:
 
 ## Usage
 ### Get User Profile Data
-```
-GET /self
-Authorization: Bearer {jwt}
 
-200 OK: user: {uid, cid, pid, connectCode}
-401 Unauthorized: missing/invalid JWT
-500 Internal Server Error: user not found
-```
-_For more examples, please refer to the [Documentation](https://example.com)_
 
 ## Road Map
 See the issues and project pages for a list of proposed features (and known issues).
