@@ -23,7 +23,7 @@ import config.MasterRoute
 import cats.effect.IO
 import user.UserServiceImpl
 import authentication.AuthenticationDaoStub
-import user.UserRoute
+import user.SelfRoute
 import request.UserContext
 import response.ErrorResponse.NotFoundError
 import user.User
@@ -52,7 +52,7 @@ class PartnerRouteTest
     )
   ).route
 
-  val userRoute: Route = new UserRoute(
+  val userRoute: Route = new SelfRoute(
     new UserServiceImpl[IO](
       MasterRoute.services.userDao,
       new AuthenticationDaoStub()
