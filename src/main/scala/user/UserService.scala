@@ -9,6 +9,8 @@ import response.ErrorResponse
 import response.ErrorResponse.{ClientError, InternalError, NotFoundError}
 import cats.Functor
 import cats.Monad
+import cats.data.OptionT
+import cats.Applicative
 
 object UserRecordMapper extends RecordMapper[UserRecord, Either[ModelValidationError, User]] {
   override def from(record: UserRecord): Either[ModelValidationError, User] = {
@@ -22,6 +24,8 @@ trait UserService[F[_]] {
   def registerUser(ur: UserRegistration): EitherT[F, ErrorResponse, Tokens]
 
   def getUser(uid: Int): EitherT[F, ErrorResponse, User]
+
+  def getUser(email: String): EitherT[F, ErrorResponse, User]
 }
 
 class UserServiceImpl[F[_]: Monad](userDao: UserDao[F], authDao: AuthenticationDao[F]) extends UserService[F] {
@@ -38,8 +42,23 @@ class UserServiceImpl[F[_]: Monad](userDao: UserDao[F], authDao: AuthenticationD
 
   override def getUser(uid: Int): EitherT[F, ErrorResponse, User] = {
     logger.info(s"Retrieving user by UID $uid.")
+    this.handleMissingUser(
+      userDao.getUser(uid)
+    )
+  }
+
+  override def getUser(email: String): EitherT[F, ErrorResponse, User] = {
+    logger.info(s"Retrieving user by email $email.")
+    if (EmailValidator.isValid(email)) {
+      handleMissingUser(userDao.getUser(email))
+    } else {
+      EitherT.leftT(ClientError("Badly formatted email."))
+    }
+  }
+
+  def handleMissingUser(maybeUser: OptionT[F, UserRecord]): EitherT[F, ErrorResponse, User] = {
     for {
-      record <- userDao.getUser(uid).toRight(NotFoundError(s"User with UID $uid does not exist."))
+      record <- maybeUser.toRight(NotFoundError(s"User does not exist."))
       user <- UserRecordMapper.from(record)
         .leftMap[ErrorResponse](e => ClientError(s"User record malformed. Reason: ${e.reason}"))
         .toEitherT[F]

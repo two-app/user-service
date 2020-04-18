@@ -51,16 +51,12 @@ A Scala implementation of the User Service:
 * MySQL: https://dev.mysql.com/downloads/mysql/
 
 ## Usage
-### Get User Profile Data
-```
-GET /self
-Authorization: Bearer {jwt}
+### Public (Gateway Enabled)
+- Creating and Retrieving Self [/self](src/main/scala/user/SelfRoute.md)
+- Connecting with Partner and retrieving Partner [/partner](src/main/scala/partner/PartnerRoute.md)
 
-200 OK: user: {uid, cid, pid, connectCode}
-401 Unauthorized: missing/invalid JWT
-500 Internal Server Error: user not found
-```
-_For more examples, please refer to the [Documentation](https://example.com)_
+### Private (Internal)
+- Retrieving User by Email [/user](src/main/scala/user/UserRoute.md)
 
 ## Road Map
 See the issues and project pages for a list of proposed features (and known issues).

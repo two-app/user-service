@@ -1,17 +1,17 @@
-# User API
-Internal REST endpoints to retrieve user data.
+# Partner API
+The partner endpoint provides REST endpoints to connect with a user, or retrieve partners information.
 
 ## Endpoints
 | Verb | Endpoint | Description                     | Input                                  | Output            |
 |------|----------|---------------------------------|----------------------------------------|-------------------|
-| GET | `/user?email={}`  | Retrieve a user by email.            | [*Required* Query Param 'email'](#Email) | [User](#User), NotFoundError, ClientError |
+| POST | `/partner/{connectCode}` | Connect to a new partner. | [ConnectCode](#ConnectCode)  | [Tokens](#Tokens), ClientError |
+| GET  | `/partner`  | Retrieve user from PID in Auth header. |                              | [User](#User)     |
 
 ## Models
-### Email
+### ConnectCode
 | Attribute      | Type           | Contraints                           |
 |----------------|----------------|--------------------------------------|
-| email          | `string`       | unique && https://stackoverflow.com/a/32445372 |
-
+| connectCode | `string` | length >= 6, is valid according to hash |
 
 ### User
 | Attribute | Type          |
