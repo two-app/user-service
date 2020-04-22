@@ -94,5 +94,5 @@ class DoobieCoupleDaoTest
       .get
 
   def randomEmail(): String =
-    "quillCoupleTest-" + Random.alphanumeric.take(10).mkString + "@twotest.com"
+    "userServiceTest-" + Random.alphanumeric.take(10).mkString + "@twotest.com"
 }
