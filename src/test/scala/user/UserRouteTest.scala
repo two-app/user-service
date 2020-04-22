@@ -27,7 +27,6 @@ class UserRouteTest
     with UserTestArbitraries
     with AuthTestArbitraries {
 
-
   val selfRoute: Route = new SelfRoute(
     new UserServiceImpl(
       MasterRoute.services.userDao,
