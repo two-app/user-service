@@ -186,5 +186,5 @@ class UserServiceTest extends AnyFunSpec with Matchers with BeforeAndAfterEach {
       .get
 
   def randomEmail(): String =
-    "quillCoupleTest-" + Random.alphanumeric.take(10).mkString + "@twotest.com"
+    "userServiceTest-" + Random.alphanumeric.take(10).mkString + "@twotest.com"
 }

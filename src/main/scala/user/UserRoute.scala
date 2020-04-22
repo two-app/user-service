@@ -18,7 +18,10 @@ class UserRouteDispatcher(userService: UserService[IO])
   override val route: Route = extractRequest { request =>
     path("user") {
       get {
-        parameter("email") { email => handleGetUser(email) }
+        concat(
+          parameter("email") { email => handleGetUser(email) },
+          parameter("uid".as[Int]) { uid => handleGetUser(uid) }
+        )
       }
     }
   }
@@ -33,12 +36,26 @@ class UserRouteDispatcher(userService: UserService[IO])
     }
   }
 
+  def handleGetUser(uid: Int): Route = {
+    logger.info(s"GET /user with UID ${uid}")
+    val userEffect = userRoute.getUser(uid)
+
+    onSuccess(userEffect.value.unsafeToFuture()) {
+      case Left(error: ErrorResponse) => complete(error.status, error)
+      case Right(user: User)          => complete(user)
+    }
+  }
+
 }
 
 class UserRoute[F[_]](userService: UserService[F]) {
 
   def getUser(email: String): EitherT[F, ErrorResponse, User] = {
     userService.getUser(email)
+  }
+
+  def getUser(uid: Int): EitherT[F, ErrorResponse, User] = {
+    userService.getUser(uid)
   }
 
 }
