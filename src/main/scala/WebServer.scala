@@ -10,7 +10,6 @@ class Server extends HttpApp {
 }
 
 object WebServer extends IOApp {
-
   def run(args: List[String]): IO[ExitCode] = {
     val port: Int = Config.load().getInt("server.port")
     new Server().startServer("localhost", port)
