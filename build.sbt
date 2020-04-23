@@ -34,6 +34,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http-testkit" % "10.1.11"
 )
 
+enablePlugins(JavaAppPackaging)
 enablePlugins(FlywayPlugin)
 
 flywayUrl := "jdbc:mysql://localhost:3306"
