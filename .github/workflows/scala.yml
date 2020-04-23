@@ -33,3 +33,9 @@ jobs:
         run: sbt --debug flywayMigrate
       - name: Run tests
         run: sbt test
+  publish:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Publish new docker image locally
+        run: sbt docker:publishLocal
