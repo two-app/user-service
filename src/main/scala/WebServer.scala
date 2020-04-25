@@ -11,8 +11,9 @@ class Server extends HttpApp {
 
 object WebServer extends IOApp {
   def run(args: List[String]): IO[ExitCode] = {
+    val host: String = Config.load().getString("server.host")
     val port: Int = Config.load().getInt("server.port")
-    new Server().startServer("localhost", port)
+    new Server().startServer(host, port)
     IO(ExitCode.Success)
   }
 }
