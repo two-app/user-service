@@ -93,8 +93,7 @@ metadata:
   name: user-service-rds
 subsets:
   - addresses:
-    - ip: 192.168.0.22
-    #- ip: user-service.czxkdyhdzjxs.eu-west-1.rds.amazonaws.com
+    - ip: user-service.czxkdyhdzjxs.eu-west-1.rds.amazonaws.com
     ports:
     - port: 3306
 ---
