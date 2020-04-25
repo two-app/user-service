@@ -33,7 +33,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: db-user-pass
-              value: username
+              key: username
         - name: JDBC_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -94,7 +94,8 @@ metadata:
   name: user-service-rds
 subsets:
   - addresses:
-    - ip: user-service.czxkdyhdzjxs.eu-west-1.rds.amazonaws.com
+    - ip: localhost
+    # - ip: user-service.czxkdyhdzjxs.eu-west-1.rds.amazonaws.com
     ports:
     - port: 3306
 ---
