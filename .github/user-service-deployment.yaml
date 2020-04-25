@@ -25,6 +25,20 @@ spec:
           value: "8080"
         - name: SERVER_HOST
           value: "0.0.0.0"
+        - name: JDBC_URL
+          value: "jdbc:mysql://user-service-rds/users"
+        - name: JDBC_URL_WITHOUT_SCHEMA
+          value: "jdbc:mysql://user-service-rds"
+        - name: JDBC_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: dbuserpass
+              value: username
+        - name: JDBC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: dbuserpass
+              key: password
       imagePullSecrets:
       - name: regcred
 ---
@@ -80,7 +94,7 @@ metadata:
   name: user-service-rds
 subsets:
   - addresses:
-    - ip: 10.240.0.4
+    - ip: user-service.czxkdyhdzjxs.eu-west-1.rds.amazonaws.com
     ports:
     - port: 3306
 ---
