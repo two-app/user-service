@@ -32,12 +32,12 @@ spec:
         - name: JDBC_USERNAME
           valueFrom:
             secretKeyRef:
-              name: dbuserpass
+              name: db-user-pass
               value: username
         - name: JDBC_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: dbuserpass
+              name: db-user-pass
               key: password
       imagePullSecrets:
       - name: regcred
