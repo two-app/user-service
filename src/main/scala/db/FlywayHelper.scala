@@ -21,6 +21,10 @@ object FlywayHelper {
     flyway.get
   }
 
+  def migrate(): Unit = {
+    getFlyway.migrate()
+  }
+
   def cleanMigrate(): Unit = {
     getFlyway.clean()
     getFlyway.migrate()

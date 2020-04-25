@@ -4,6 +4,7 @@ import cats.effect.IOApp
 import cats.effect.IO
 import cats.effect.ExitCode
 import config.Config
+import db.FlywayHelper
 
 class Server extends HttpApp {
   override protected def routes: Route = MasterRoute.masterRoute
@@ -11,6 +12,7 @@ class Server extends HttpApp {
 
 object WebServer extends IOApp {
   def run(args: List[String]): IO[ExitCode] = {
+    FlywayHelper.migrate()
     val host: String = Config.load().getString("server.host")
     val port: Int = Config.load().getInt("server.port")
     new Server().startServer(host, port)
