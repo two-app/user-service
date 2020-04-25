@@ -82,7 +82,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: user-service-rds
-Spec:
+spec:
   type: ClusterIP
   ports:
   - port: 3306
@@ -94,8 +94,7 @@ metadata:
   name: user-service-rds
 subsets:
   - addresses:
-    - ip: localhost
-    # - ip: user-service.czxkdyhdzjxs.eu-west-1.rds.amazonaws.com
+    - ip: user-service.czxkdyhdzjxs.eu-west-1.rds.amazonaws.com
     ports:
     - port: 3306
 ---
