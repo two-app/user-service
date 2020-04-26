@@ -10,6 +10,8 @@ import request.RouteDispatcher
 import response.ErrorResponse.InternalError
 import response.ErrorResponse
 import com.typesafe.scalalogging.Logger
+import scala.util.Failure
+import scala.util.Success
 
 class HealthRouteDispatcher(healthService: HealthService[IO])
     extends RouteDispatcher {
@@ -23,17 +25,25 @@ class HealthRouteDispatcher(healthService: HealthService[IO])
   }
 
   def handleHealthGet(): Route = {
-    logger.info("GET /health")
-    logger.info("Performing health check.")
+    logger.info("GET /health - Performing health check.")
     val healthEffect = healthService.getHealth().leftWiden[ErrorResponse]
-    onSuccess(healthEffect.value.unsafeToFuture()) {
+
+    onComplete(healthEffect.value.unsafeToFuture()) {
+      case Failure(exception) => 
+        handleControlledError(Left(InternalError()))
+      case Success(maybeError) =>
+        handleControlledError(maybeError)
+    }
+  }
+
+  private def handleControlledError(maybeError: Either[ErrorResponse, Any]): Route = {
+    maybeError match {
       case Left(error: ErrorResponse) =>
         logger.error("Health check failed. Responding with internal server error.")
         complete(error.status, error)
       case Right(_) =>
         logger.info("Health check completed. All OK.")
         complete(StatusCodes.OK)
-
     }
   }
 

@@ -11,6 +11,8 @@ import cats.data.EitherT
 import scala.reflect.ClassTag
 import response.ErrorResponse.InternalError
 import response.ErrorResponse
+import cats.effect.IO
+import java.sql.SQLException
 
 class HealthRouteTest extends AnyFunSpec with Matchers with ScalatestRouteTest {
 
@@ -27,13 +29,27 @@ class HealthRouteTest extends AnyFunSpec with Matchers with ScalatestRouteTest {
   }
 
   describe("unhealthy") {
-    val healthRoute: Route = new HealthRouteDispatcher(
-      () => EitherT.leftT(InternalError())
-    ).route
+    describe("controlled failure") {
+      val unhealthyRoute: Route = new HealthRouteDispatcher(
+        () => EitherT.leftT(InternalError())
+      ).route
 
-    it("should return an error response") {
-      Get("/health") ~> healthRoute ~> check {
-        entityAs[ErrorResponse] shouldBe InternalError()
+      it("should return an error response") {
+        Get("/health") ~> unhealthyRoute ~> check {
+          entityAs[ErrorResponse] shouldBe InternalError()
+        }
+      }
+    }
+
+    describe("side effect failure") {
+      val unhealthyRoute: Route = new HealthRouteDispatcher(
+        () => EitherT.left(IO.raiseError(new SQLException("Test Message")))
+      ).route
+
+      it("should return an error response") {
+        Get("/health") ~> unhealthyRoute ~> check {
+          entityAs[ErrorResponse] shouldBe InternalError()
+        }
       }
     }
   }
