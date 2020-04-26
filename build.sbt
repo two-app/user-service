@@ -1,6 +1,6 @@
 name := "user-service"
 
-version := "0.1.16"
+version := "0.1.17"
 
 scalaVersion := "2.13.1"
 
@@ -50,3 +50,4 @@ libraryDependencies += "org.typelevel" %% "cats-core" % "2.0.0"
 addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.0" cross CrossVersion.full)
 
 dockerRepository := Some("docker.pkg.github.com/two-app/user-service")
+dockerUpdateLatest := true
