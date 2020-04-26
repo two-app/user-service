@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: user-service
-        image: docker.pkg.github.com/two-app/user-service/user-service:0.1.14
+        image: docker.pkg.github.com/two-app/user-service/user-service:0.1.16
         ports:
         - containerPort: 8080
         env:
@@ -32,12 +32,12 @@ spec:
         - name: JDBC_USERNAME
           valueFrom:
             secretKeyRef:
-              name: local-db
+              name: db-user-pass
               key: username
         - name: JDBC_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: local-db
+              name: db-user-pass
               key: password
       imagePullSecrets:
       - name: regcred
