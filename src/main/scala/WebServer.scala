@@ -9,12 +9,15 @@ import doobie.hikari._
 import com.zaxxer.hikari.HikariDataSource
 import com.zaxxer.hikari.HikariConfig
 import db.DatabaseConfig
+import com.typesafe.scalalogging.Logger
 
 class Server(xa: Transactor[IO]) extends HttpApp {
   override protected def routes: Route = new MasterRoute(xa).masterRoute
 }
 
 object WebServer extends IOApp {
+
+  val logger: Logger = Logger("WebServer")
 
   // loads JDBC connection pool and applies flyway migrations
   val transactor: Resource[IO, HikariTransactor[IO]] =
@@ -28,15 +31,23 @@ object WebServer extends IOApp {
       xa = HikariTransactor[IO](ds, ce, be)
     } yield xa
 
-  def run(args: List[String]): IO[ExitCode] = transactor.use { xa =>
-    val host: String = Config.load().getString("server.host")
-    val port: Int = Config.load().getInt("server.port")
-    new Server(xa).startServer(host, port)
+  def run(args: List[String]): IO[ExitCode] = {
+    logger.info("Application started up. Loading Transactor...")
+    transactor.use { xa =>
+      logger.info("Transactor successfully loaded.")
+      val host: String = Config.load().getString("server.host")
+      val port: Int = Config.load().getInt("server.port")
 
-    IO(ExitCode.Success)
+      logger.info(s"Starting server on configured host ${host} and port ${port}.")
+      new Server(xa).startServer(host, port)
+
+      logger.info("Server finished blocking. Exiting with success.")
+      IO(ExitCode.Success)
+    }
   }
 
-  private def createDataSourceResource[M[_]: Sync](): Resource[M, HikariDataSource] = {
+  private def createDataSourceResource[M[_]: Sync]()
+      : Resource[M, HikariDataSource] = {
     val hikariConfig = new HikariConfig()
     hikariConfig.setDriverClassName(DatabaseConfig.driver)
     hikariConfig.setJdbcUrl(DatabaseConfig.jdbc)
