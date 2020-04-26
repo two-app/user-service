@@ -17,12 +17,12 @@ class MasterRoute(xa: Transactor[IO]) {
 
   val services: Services[IO] = new Services[IO](xa)
 
-  // val healthRoute: Route = new HealthRouteDispatcher(
-  //   services.healthService
-  // ).route
+  val healthRoute: Route = new HealthRouteDispatcher(
+    services.healthService
+  ).route
   val selfRoute: Route = new SelfRoute(services.userService).route
   val partnerRoute: Route = new PartnerRoute(services.partnerService).route
   val userRoute: Route = new UserRouteDispatcher(services.userService).route
 
-  val masterRoute: Route = RouteDispatcher.mergeRoutes(selfRoute, partnerRoute, userRoute)
+  val masterRoute: Route = RouteDispatcher.mergeRoutes(healthRoute, selfRoute, partnerRoute, userRoute)
 }
