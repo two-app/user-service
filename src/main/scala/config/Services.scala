@@ -6,25 +6,34 @@ import cats.effect.ContextShift
 
 import authentication.{AuthenticationDao, AuthenticationServiceDao}
 import couple.{CoupleDao, DoobieCoupleDao}
-import doobie.util.transactor.Transactor.Aux
 import partner.{PartnerRoute, PartnerService, PartnerServiceImpl}
 import user._
 import partner.PartnerDao
 import partner.DoobiePartnerDao
+import health.HealthDao
+import health.DoobieHealthDao
+import health.HealthService
+import health.HealthServiceImpl
+import doobie.util.transactor.Transactor
 
 /**
   * Container for all pure code.
   */
-class Services[F[_]: Sync: Async: ContextShift] {
-  lazy val partnerService: PartnerService[F] =
-    new PartnerServiceImpl[F](userService, coupleDao, authDao, partnerDao)
-  lazy val userService: UserService[F] =
-    new UserServiceImpl[F](userDao, authDao)
+class Services[F[_]: Async](xa: Transactor[F]) {
 
-  lazy val userDao: UserDao[F] = new DoobieUserDao[F](xa)
-  lazy val authDao: AuthenticationDao[F] = new AuthenticationServiceDao[F]()
-  lazy val coupleDao: CoupleDao[F] = new DoobieCoupleDao[F](xa)
-  lazy val partnerDao: PartnerDao[F] = new DoobiePartnerDao[F](xa)
+  val healthDao: HealthDao[F] = new DoobieHealthDao[F](xa)
+  val userDao: UserDao[F] = new DoobieUserDao[F](xa)
+  val authDao: AuthenticationDao[F] = new AuthenticationServiceDao[F]()
+  val coupleDao: CoupleDao[F] = new DoobieCoupleDao[F](xa)
+  val partnerDao: PartnerDao[F] = new DoobiePartnerDao[F](xa)
 
-  lazy val xa: Aux[F, Unit] = db.transactor[F]()
+  val healthService: HealthService[F] = new HealthServiceImpl[F](healthDao)
+  val userService: UserService[F] = new UserServiceImpl[F](userDao, authDao)
+  val partnerService: PartnerService[F] = new PartnerServiceImpl[F](
+    userService,
+    coupleDao,
+    authDao,
+    partnerDao
+  )
+
 }

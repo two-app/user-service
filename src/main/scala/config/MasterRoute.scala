@@ -10,13 +10,16 @@ import cats.effect.ContextShift
 import doobie.util.ExecutionContexts
 import cats.effect.IO
 import request.RouteDispatcher
+import health.HealthRouteDispatcher
+import doobie.util.transactor.Transactor
 
-object MasterRoute {
-  implicit val cs: ContextShift[IO] =
-    IO.contextShift(ExecutionContexts.synchronous)
+class MasterRoute(xa: Transactor[IO]) {
 
-  val services: Services[IO] = new Services[IO]()
+  val services: Services[IO] = new Services[IO](xa)
 
+  // val healthRoute: Route = new HealthRouteDispatcher(
+  //   services.healthService
+  // ).route
   val selfRoute: Route = new SelfRoute(services.userService).route
   val partnerRoute: Route = new PartnerRoute(services.partnerService).route
   val userRoute: Route = new UserRouteDispatcher(services.userService).route

@@ -30,19 +30,4 @@ trait AuthTestArbitraries {
     connectCodeFromId(
       UserContext.from(userTokens.accessToken).right.get.uid
     )
-
-}
-
-object AuthTestUtil {
-  def jwt(uid: Int, pid: Int, cid: Int): String = Jwt.encode(
-    claim = JwtClaim(content = s"""{"uid": $uid, "pid": $pid, "cid": $cid}""")
-  )
-
-  def unconnectedJwt(uid: Int, connectCode: String): String = Jwt.encode(
-    claim =
-      JwtClaim(content = s"""{"uid": $uid, "connectCode": "$connectCode"}""")
-  )
-
-  def authHeader(jwt: String): RawHeader =
-    RawHeader("Authorization", s"Bearer $jwt")
 }

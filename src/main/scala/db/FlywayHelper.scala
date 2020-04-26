@@ -1,32 +1,19 @@
 package db
 
-import com.typesafe.config.ConfigFactory
 import org.flywaydb.core.Flyway
+import config.Config
+import javax.sql.DataSource
 
 object FlywayHelper {
-
-  private var flyway: Option[Flyway] = None
-
-  private def getFlyway: Flyway = {
-    if (flyway.isEmpty) {
-      val dbUrl: String = ConfigFactory.load().getString("db.jdbcWithoutSchema")
-      val schema: String = ConfigFactory.load().getString("db.schema")
-      flyway = Option(Flyway.configure()
-        .locations("migration")
-        .schemas(schema)
-        .dataSource(dbUrl, "root", "")
-        .load())
-    }
-
-    flyway.get
+  def migrate(dataSource: DataSource): Unit = {
+    configureFlyway(dataSource).migrate()
   }
 
-  def migrate(): Unit = {
-    getFlyway.migrate()
-  }
-
-  def cleanMigrate(): Unit = {
-    getFlyway.clean()
-    getFlyway.migrate()
-  }
+  private def configureFlyway(dataSource: DataSource): Flyway =
+    Flyway
+      .configure()
+      .dataSource(dataSource)
+      .locations("migration")
+      .schemas(DatabaseConfig.schema)
+      .load()
 }

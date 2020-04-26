@@ -5,27 +5,27 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.BeforeAndAfterEach
 import cats.effect.IO
 import doobie.util.transactor.Transactor.Aux
-import db.TransactorUtil
-import db.FlywayHelper
+import db.DatabaseTestMixin
 import user.UserDao
 import user.DoobieUserDao
 import user.UserTestArbitraries
 import request.UserContext
 import couple.CoupleDao
 import couple.DoobieCoupleDao
+import doobie.util.transactor.Transactor
 
 class PartnerDaoTest
     extends AsyncFunSpec
     with Matchers
     with BeforeAndAfterEach
-    with UserTestArbitraries {
+    with UserTestArbitraries
+    with DatabaseTestMixin {
 
-  val xa: Aux[IO, Unit] = TransactorUtil.transactor()
   val partnerDao: PartnerDao[IO] = new DoobiePartnerDao[IO](xa)
   val userDao: UserDao[IO] = new DoobieUserDao[IO](xa)
   val coupleDao: CoupleDao[IO] = new DoobieCoupleDao[IO](xa)
 
-  override def beforeEach(): Unit = FlywayHelper.cleanMigrate()
+  override def beforeEach(): Unit = cleanMigrate()
 
   describe("getPartnerId") {
     describe("Connected user") {

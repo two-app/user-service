@@ -6,15 +6,21 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.funspec.AsyncFunSpec
 import cats.effect.IO
 import doobie.util.transactor.Transactor.Aux
-import db._
+import db.DatabaseTestMixin
+import db.DatabaseError
 import java.time.Instant
+import doobie.util.transactor.Transactor
+import db.DuplicateRecordError
 
-class UserDaoTest extends AsyncFunSpec with Matchers with BeforeAndAfterEach {
+class UserDaoTest
+    extends AsyncFunSpec
+    with Matchers
+    with BeforeAndAfterEach
+    with DatabaseTestMixin {
 
-  val xa: Aux[IO, Unit] = TransactorUtil.transactor()
   val userDao: UserDao[IO] = new DoobieUserDao[IO](xa)
 
-  override def beforeEach(): Unit = FlywayHelper.cleanMigrate()
+  override def beforeEach(): Unit = cleanMigrate()
 
   describe("storeUser") {
     it("should generate unique UIDs") {

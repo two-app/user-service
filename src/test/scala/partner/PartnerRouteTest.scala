@@ -18,7 +18,7 @@ import response.ErrorResponse
 import response.ErrorResponse.ClientError
 import authentication.AuthTestArbitraries
 import user.UserTestArbitraries
-import db.FlywayHelper
+import db.DatabaseTestMixin
 import config.MasterRoute
 import cats.effect.IO
 import user.UserServiceImpl
@@ -35,7 +35,8 @@ class PartnerRouteTest
     with ScalatestRouteTest
     with BeforeAndAfterEach
     with AuthTestArbitraries
-    with UserTestArbitraries {
+    with UserTestArbitraries
+    with DatabaseTestMixin {
 
   val userOneConnectCode = "zQp7Wl"
   val userTwoConnectCode = "0Q3ar8"
@@ -43,23 +44,23 @@ class PartnerRouteTest
   val partnerRoute: Route = new PartnerRoute(
     new PartnerServiceImpl[IO](
       new UserServiceImpl[IO](
-        MasterRoute.services.userDao,
+        new MasterRoute(xa).services.userDao,
         new AuthenticationDaoStub()
       ),
-      MasterRoute.services.coupleDao,
+      new MasterRoute(xa).services.coupleDao,
       new AuthenticationDaoStub(),
-      MasterRoute.services.partnerDao
+      new MasterRoute(xa).services.partnerDao
     )
   ).route
 
   val userRoute: Route = new SelfRoute(
     new UserServiceImpl[IO](
-      MasterRoute.services.userDao,
+      new MasterRoute(xa).services.userDao,
       new AuthenticationDaoStub()
     )
   ).route
 
-  override def beforeEach(): Unit = FlywayHelper.cleanMigrate()
+  override def beforeEach(): Unit = cleanMigrate()
 
   def registerUser(): Tokens =
     Post("/self", randomUserRegistration()) ~> userRoute ~> check {

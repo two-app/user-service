@@ -4,7 +4,7 @@ import pdi.jwt.Jwt
 import cats.effect.Sync
 import pdi.jwt.JwtClaim
 
-class AuthenticationDaoStub[F[_]: Sync] extends AuthenticationDao[F] {
+class AuthenticationDaoStub[F[_]: Sync] extends AuthenticationDao[F] with AuthTestArbitraries {
   override def createTokens(
       uid: Int,
       pid: Option[Int],
@@ -12,17 +12,17 @@ class AuthenticationDaoStub[F[_]: Sync] extends AuthenticationDao[F] {
   ): F[Tokens] = {
     if (pid == None) {
       Sync[F].pure(
-        Tokens(AuthTestUtil.unconnectedJwt(uid, "testConnectCode"), "test-refresh-token")
+        Tokens(unconnectedJwt(uid, "testConnectCode"), "test-refresh-token")
       )
     } else {
       Sync[F].pure(
-        Tokens(AuthTestUtil.jwt(uid, pid.get, cid.get), "test-refresh-token")
+        Tokens(jwt(uid, pid.get, cid.get), "test-refresh-token")
       )
     }
   }
 
   override def storeCredentials(uid: Int, password: String): F[Tokens] =
     Sync[F].pure(
-      Tokens(AuthTestUtil.unconnectedJwt(uid, "testConnectCode"), "test-refresh-token")
+      Tokens(unconnectedJwt(uid, "testConnectCode"), "test-refresh-token")
     )
 }
