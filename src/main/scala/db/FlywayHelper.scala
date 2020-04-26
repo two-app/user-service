@@ -15,5 +15,6 @@ object FlywayHelper {
       .dataSource(dataSource)
       .locations("migration")
       .schemas(DatabaseConfig.schema)
+      .defaultSchema(DatabaseConfig.schema)
       .load()
 }

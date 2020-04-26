@@ -39,7 +39,7 @@ object WebServer extends IOApp {
   private def createDataSourceResource[M[_]: Sync](): Resource[M, HikariDataSource] = {
     val hikariConfig = new HikariConfig()
     hikariConfig.setDriverClassName(DatabaseConfig.driver)
-    hikariConfig.setJdbcUrl(DatabaseConfig.jdbcWithoutSchema)
+    hikariConfig.setJdbcUrl(DatabaseConfig.jdbc)
     hikariConfig.setUsername(DatabaseConfig.username)
     hikariConfig.setPassword(DatabaseConfig.password)
 
