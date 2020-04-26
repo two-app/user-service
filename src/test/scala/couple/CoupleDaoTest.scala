@@ -1,29 +1,28 @@
 package couple
 
-import db.FlywayHelper
-import doobie.util.transactor.Transactor.Aux
+import db.DatabaseTestMixin
 import cats.implicits._
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.funspec.AsyncFunSpec
 import org.scalatest.matchers.should.Matchers
 
 import scala.util.Random
-import db.TransactorUtil
 import cats.effect.IO
 import user.UserDao
 import user.DoobieUserDao
 import user.UserRegistration
+import doobie.util.transactor.Transactor
 
 class DoobieCoupleDaoTest
     extends AsyncFunSpec
     with Matchers
-    with BeforeAndAfterEach {
+    with BeforeAndAfterEach
+    with DatabaseTestMixin {
 
-  val xa: Aux[IO, Unit] = TransactorUtil.transactor()
   val coupleDao: CoupleDao[IO] = new DoobieCoupleDao[IO](xa)
   val userDao: UserDao[IO] = new DoobieUserDao[IO](xa)
 
-  override def beforeEach(): Unit = FlywayHelper.cleanMigrate()
+  override def beforeEach(): Unit = cleanMigrate()
 
   describe("storeCouple") {
     it("should generate unique CIDs") {

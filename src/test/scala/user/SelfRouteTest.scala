@@ -21,18 +21,18 @@ import response.ErrorResponse
 import response.ErrorResponse.AuthorizationError
 import response.ErrorResponse.ClientError
 import org.scalatest.BeforeAndAfterEach
-import db.FlywayHelper
+import db.DatabaseTestMixin
 
-class SelfRouteTest extends AsyncFunSpec with Matchers with ScalatestRouteTest with BeforeAndAfterEach {
+class SelfRouteTest extends AsyncFunSpec with Matchers with ScalatestRouteTest with BeforeAndAfterEach with DatabaseTestMixin {
 
   val route: Route = new SelfRoute(
     new UserServiceImpl(
-      MasterRoute.services.userDao,
+      new MasterRoute(xa).services.userDao,
       new AuthenticationDaoStub()
     )
   ).route
 
-  override def beforeEach(): Unit = FlywayHelper.cleanMigrate()
+  override def beforeEach(): Unit = cleanMigrate()
 
   def authHeader(token: String): List[RawHeader] =
     List(RawHeader("Authorization", s"Bearer $token"))

@@ -14,7 +14,7 @@ import user.{User, UserRegistration, UserService}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.{global => ec}
 import scala.concurrent.Future
-import db.FlywayHelper
+import db.DatabaseTestMixin
 import cats.effect.IO
 import config.MasterRoute
 import authentication.AuthenticationDaoStub
@@ -27,21 +27,22 @@ class PartnerServiceTest
     extends AnyFunSpec
     with Matchers
     with BeforeAndAfterEach
-    with UserTestArbitraries {
+    with UserTestArbitraries
+    with DatabaseTestMixin {
 
   val userService: UserService[IO] = new UserServiceImpl[IO](
-    MasterRoute.services.userDao,
+    new MasterRoute(xa).services.userDao,
     new AuthenticationDaoStub()
   )
 
   val partnerService: PartnerService[IO] = new PartnerServiceImpl[IO](
     userService,
-    MasterRoute.services.coupleDao,
+    new MasterRoute(xa).services.coupleDao,
     new AuthenticationDaoStub(),
-    MasterRoute.services.partnerDao
+    new MasterRoute(xa).services.partnerDao
   )
 
-  override def beforeEach(): Unit = FlywayHelper.cleanMigrate()
+  override def beforeEach(): Unit = cleanMigrate()
 
   def registerUser(): UserContext =
     userService

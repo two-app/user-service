@@ -3,12 +3,12 @@ package user
 import org.scalatest.funspec.AsyncFunSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.BeforeAndAfterEach
-import db.FlywayHelper
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.server.Directives._
+import db.DatabaseTestMixin
 import scala.reflect.ClassTag
 import cats.effect.IO
 import config.MasterRoute
@@ -28,22 +28,24 @@ class UserRouteTest
     with ScalatestRouteTest
     with BeforeAndAfterEach
     with UserTestArbitraries
-    with AuthTestArbitraries {
+    with AuthTestArbitraries
+    with DatabaseTestMixin {
 
   val selfRoute: Route = new SelfRoute(
     new UserServiceImpl(
-      MasterRoute.services.userDao,
+      new MasterRoute(xa).services.userDao,
       new AuthenticationDaoStub()
     )
   ).route
 
   val route: Route = selfRoute ~ (new UserRouteDispatcher(
     new UserServiceImpl(
-      MasterRoute.services.userDao,
+      new MasterRoute(xa).services.userDao,
       new AuthenticationDaoStub()
     )
   ).route)
-  override def beforeEach(): Unit = FlywayHelper.cleanMigrate()
+  
+  override def beforeEach(): Unit = cleanMigrate()
 
   def GetUser[T: FromEntityUnmarshaller: ClassTag](email: String): T =
     Get(s"/user?email=${email}") ~> route ~> check {

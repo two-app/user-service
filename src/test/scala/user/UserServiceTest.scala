@@ -17,7 +17,7 @@ import java.time.Instant
 import org.scalatest.funspec.AnyFunSpec
 import cats.effect.IO
 import config.MasterRoute
-import db.FlywayHelper
+import db.DatabaseTestMixin
 import config.Services
 import scala.util.Random
 import cats.effect.Sync
@@ -25,6 +25,7 @@ import response.ErrorResponse
 import request.UserContext
 
 import authentication._
+import doobie.util.transactor.Transactor
 
 class UserRecordMapperTest extends AnyFlatSpec with Matchers {
   "User from UserRecord" should "return the correct data" in {
@@ -72,14 +73,18 @@ class UserRecordMapperTest extends AnyFlatSpec with Matchers {
   }
 }
 
-class UserServiceTest extends AnyFunSpec with Matchers with BeforeAndAfterEach {
+class UserServiceTest
+    extends AnyFunSpec
+    with Matchers
+    with BeforeAndAfterEach
+    with DatabaseTestMixin {
 
   var userService: UserService[IO] = new UserServiceImpl[IO](
-    MasterRoute.services.userDao,
+    new MasterRoute(xa).services.userDao,
     new AuthenticationDaoStub[IO]()
   )
 
-  override def beforeEach(): Unit = FlywayHelper.cleanMigrate()
+  override def beforeEach(): Unit = cleanMigrate()
 
   describe("registerUser") {
     it("valid registration should return tokens") {
