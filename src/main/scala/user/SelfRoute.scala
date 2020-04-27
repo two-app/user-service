@@ -10,9 +10,17 @@ import com.typesafe.scalalogging.Logger
 import request.UserContext
 import response.ErrorResponse
 import response.ErrorResponse.{ClientError, NotFoundError}
+import cats.effect.ConcurrentEffect
+import cats.effect.implicits._
+import cats.implicits._
+import scala.concurrent.Future
+import cats.data.EitherT
+import response.ErrorResponse.InternalError
+import request.RouteDispatcher
 
-class SelfRoute(userService: UserService[IO]) {
-  val logger: Logger = Logger(classOf[SelfRoute])
+class SelfRouteDispatcher[F[_]: ConcurrentEffect](userService: UserService[F])
+    extends RouteDispatcher {
+  val logger: Logger = Logger[SelfRouteDispatcher[F]]
 
   val getSelfRoute: Route = path("self") {
     get {
@@ -22,13 +30,11 @@ class SelfRoute(userService: UserService[IO]) {
 
   val postSelfRoute: Route = path("self") {
     post {
-      extractRequest { request =>
-        postSelf(request)
-      }
+      extractRequest { request => postSelf(request) }
     }
   }
 
-  val route: Route = getSelfRoute ~ postSelfRoute
+  override val route: Route = getSelfRoute ~ postSelfRoute
 
   def postSelf(request: HttpRequest): Route = {
     logger.info("POST /self")
@@ -41,24 +47,37 @@ class SelfRoute(userService: UserService[IO]) {
   }
 
   def registerUser(ur: UserRegistration): Route = {
-    logger.info(f"Registering user: {firstName: ${ur.firstName}, lastName: ${ur.lastName}, email: ${ur.email}}")
+    logger.info(
+      f"Registering user: {firstName: ${ur.firstName}, lastName: ${ur.lastName}, email: ${ur.email}}"
+    )
+    val registerUserFuture = userService
+      .registerUser(ur)
+      .value
+      .toIO
+      .unsafeToFuture()
 
-    onSuccess(userService.registerUser(ur).value.unsafeToFuture()) {
+    onSuccess(registerUserFuture) {
       case Left(error: ErrorResponse) => complete(error.status, error)
-      case Right(tokens: Tokens) => complete(tokens)
+      case Right(tokens: Tokens)      => complete(tokens)
     }
   }
 
   def getSelf(request: HttpRequest): Route = {
     logger.info("GET /self")
-    
-    UserContext.from(request).map(u => u.uid).fold(
-      e => complete(e.status, e),
-      uid => onSuccess(userService.getUser(uid).value.unsafeToFuture()) {
-        case Left(_: NotFoundError) => complete(StatusCodes.InternalServerError)
-        case Left(e: ErrorResponse) => complete(e.status, e)
-        case Right(user: User) => complete(user)
+
+    val userEffect = for {
+      ctx <- EitherT.fromEither[F](UserContext.from(request))
+      user <- userService.getUser(ctx.uid).leftMap {
+        case NotFoundError(e) => InternalError()
+        case x                => x
       }
-    )
+    } yield user
+
+    val userFuture = userEffect.value.toIO.unsafeToFuture()
+
+    onSuccess(userFuture) {
+      case Left(error: ErrorResponse) => complete(error.status, error)
+      case Right(user: User)          => complete(user)
+    }
   }
 }

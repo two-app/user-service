@@ -27,7 +27,7 @@ class PartnerServiceImpl[F[_]: Monad](
     authDao: AuthenticationDao[F],
     partnerDao: PartnerDao[F]
 ) extends PartnerService[F] {
-  val logger: Logger = Logger(classOf[PartnerService[F]])
+  val logger: Logger = Logger[PartnerService[F]]
 
   override def connectUsers(
       uid: Int,
@@ -58,6 +58,7 @@ class PartnerServiceImpl[F[_]: Monad](
   }
 
   override def getPartner(uid: Int): OptionT[F, User] = {
+    logger.info(s"Retrieving partner of UID ${uid}")
     for {
       pid <- partnerDao.getPartnerId(uid)
       user <- userService.getUser(pid).toOption

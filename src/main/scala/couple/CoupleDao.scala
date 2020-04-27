@@ -30,20 +30,33 @@ trait CoupleDao[F[_]] {
 class DoobieCoupleDao[F[_]: Bracket[*[_], Throwable]](
     val xa: Transactor[F]
 ) extends CoupleDao[F] {
-  override def storeCouple(uid: Int, pid: Int): F[Int] =
+
+  val logger: Logger = Logger[DoobieCoupleDao[F]]
+
+  override def storeCouple(uid: Int, pid: Int): F[Int] = {
+    logger.info(s"Storing couple with UID ${uid} and PID ${pid}")
     CoupleSql
       .insert(CoupleRecord.from(uid, pid))
       .transact(xa)
+  }
 
-  override def getCouple(cid: Int): OptionT[F, CoupleRecord] = OptionT(
-    CoupleSql.select(cid).transact(xa)
-  )
+  override def getCouple(cid: Int): OptionT[F, CoupleRecord] = {
+    logger.info(s"Retrieving couple by CID ${cid}")
+    OptionT(
+      CoupleSql.select(cid).transact(xa)
+    )
+  }
 
   override def connectUserToPartner(uid: Int, pid: Int, cid: Int): F[Unit] = {
+    logger.info(s"Connecting UID ${uid} to PID ${pid} with CID ${cid}")
     connectionTransaction(uid, pid, cid).transact(xa)
   }
 
-  private def connectionTransaction(uid: Int, pid: Int, cid: Int): ConnectionIO[Unit] =
+  private def connectionTransaction(
+      uid: Int,
+      pid: Int,
+      cid: Int
+  ): ConnectionIO[Unit] = 
     for {
       updateUser <- CoupleSql.updateUserPartnerId(uid, pid, cid)
       updatePartner <- CoupleSql.updateUserPartnerId(pid, uid, cid)

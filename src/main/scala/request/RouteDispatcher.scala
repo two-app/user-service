@@ -15,4 +15,8 @@ object RouteDispatcher {
   def mergeRoutes(routes: Route*): Route = {
     routes.reduce(_ ~ _);
   }
+
+  def mergeDispatchers(dispatchers: RouteDispatcher*): Route = {
+    dispatchers.map(_.route).reduce(_ ~ _)
+  }
 }

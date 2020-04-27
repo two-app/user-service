@@ -21,6 +21,7 @@ import cats.effect.IO
 import cats.effect.Async
 import scala.util.Failure
 import scala.util.Success
+import com.typesafe.scalalogging.Logger
 
 case class Credentials(uid: Int, password: String)
 
@@ -43,6 +44,8 @@ class AuthenticationServiceDao[F[_]: Async] extends AuthenticationDao[F] {
   implicit val system: ActorSystem = ActorSystem()
   implicit val materialise: ActorMaterializer = ActorMaterializer()
 
+  val logger: Logger = Logger[AuthenticationServiceDao[F]]
+
   override def storeCredentials(uid: Int, password: String): F[Tokens] = {
     val credentials = Credentials(uid, password)
     val request = HttpRequest(
@@ -54,6 +57,8 @@ class AuthenticationServiceDao[F[_]: Async] extends AuthenticationDao[F] {
         credentials.toJson.compactPrint
       )
     )
+
+    logger.info("Performing POST to authentication service on /credentials")
 
     val futureTokens: Future[Tokens] =
       Http().singleRequest(request).flatMap(r => Unmarshal(r).to[Tokens])
@@ -74,6 +79,10 @@ class AuthenticationServiceDao[F[_]: Async] extends AuthenticationDao[F] {
         ContentTypes.`application/json`,
         TokenRequest(uid, pid, cid).toJson.compactPrint
       )
+    )
+
+    logger.info(
+      s"Performing POST to authentication service on /tokens with UID ${uid}, PID ${pid} and CID ${cid}"
     )
 
     val futureTokens: Future[Tokens] =

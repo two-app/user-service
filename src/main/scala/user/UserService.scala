@@ -29,11 +29,10 @@ trait UserService[F[_]] {
 }
 
 class UserServiceImpl[F[_]: Monad](userDao: UserDao[F], authDao: AuthenticationDao[F]) extends UserService[F] {
-  val logger: Logger = Logger(classOf[UserService[F]])
+  val logger: Logger = Logger[UserService[F]]
 
   override def registerUser(ur: UserRegistration): EitherT[F, ErrorResponse, Tokens] = {
     logger.info(s"Registering user with email '${ur.email}'.'")
-    
     for {
       uid <- userDao.storeUser(ur).leftMap(_ => ClientError("An account with this email exists."))
       tokens <- EitherT.right(authDao.storeCredentials(uid, ur.password))

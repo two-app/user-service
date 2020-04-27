@@ -1,5 +1,5 @@
 import akka.http.scaladsl.server.{HttpApp, Route}
-import config.MasterRoute
+import config.Services
 import config.Config
 import db.FlywayHelper
 import cats.effect._
@@ -11,8 +11,8 @@ import com.zaxxer.hikari.HikariConfig
 import db.DatabaseConfig
 import com.typesafe.scalalogging.Logger
 
-class Server(xa: Transactor[IO]) extends HttpApp {
-  override protected def routes: Route = new MasterRoute(xa).masterRoute
+class Server[F[_] : Timer : ConcurrentEffect](xa: Transactor[F]) extends HttpApp {
+  override protected def routes: Route = new Services[F](xa).masterRoute
 }
 
 object WebServer extends IOApp {

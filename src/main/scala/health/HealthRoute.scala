@@ -12,11 +12,16 @@ import response.ErrorResponse
 import com.typesafe.scalalogging.Logger
 import scala.util.Failure
 import scala.util.Success
+import scala.concurrent.duration._
+import cats.effect.Timer
+import cats.effect.ConcurrentEffect
+import cats.Monad
+import cats.effect.implicits._
 
-class HealthRouteDispatcher(healthService: HealthService[IO])
+class HealthRouteDispatcher[F[_]: Timer : ConcurrentEffect : Monad](healthService: HealthService[F])
     extends RouteDispatcher {
 
-  val logger: Logger = Logger[HealthRouteDispatcher]
+  val logger: Logger = Logger[HealthRouteDispatcher[F]]
 
   override def route: Route = path("health") {
     get {
@@ -25,10 +30,15 @@ class HealthRouteDispatcher(healthService: HealthService[IO])
   }
 
   def handleHealthGet(): Route = {
+    type ToFuture[F[_]] = ConcurrentEffect[F]
     logger.info("GET /health - Performing health check.")
-    val healthEffect = healthService.getHealth().leftWiden[ErrorResponse]
+    val healthFuture = healthService.getHealth().leftWiden[ErrorResponse]
+      .value
+      .timeout(5.seconds)
+      .toIO
+      .unsafeToFuture()
 
-    onComplete(healthEffect.value.unsafeToFuture()) {
+    onComplete(healthFuture) {
       case Failure(exception) => 
         handleControlledError(Left(InternalError()))
       case Success(maybeError) =>

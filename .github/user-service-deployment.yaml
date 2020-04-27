@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: user-service
-        image: docker.pkg.github.com/two-app/user-service/user-service:0.1.19
+        image: docker.pkg.github.com/two-app/user-service/user-service:0.1.2
         ports:
         - containerPort: 8080
         env:
@@ -25,6 +25,8 @@ spec:
           value: "8080"
         - name: SERVER_HOST
           value: "0.0.0.0"
+        - name: SERVICE_AUTHENTICATION_LOCATION
+          value: "http://authentication-service:8080"
         - name: JDBC_URL
           value: "jdbc:mysql://user-service-rds/users"
         - name: JDBC_URL_WITHOUT_SCHEMA

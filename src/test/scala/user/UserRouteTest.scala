@@ -11,7 +11,7 @@ import akka.http.scaladsl.server.Directives._
 import db.DatabaseTestMixin
 import scala.reflect.ClassTag
 import cats.effect.IO
-import config.MasterRoute
+import config.TestServices
 import authentication.AuthenticationDaoStub
 import response.ErrorResponse
 import response.ErrorResponse.ClientError
@@ -31,19 +31,7 @@ class UserRouteTest
     with AuthTestArbitraries
     with DatabaseTestMixin {
 
-  val selfRoute: Route = new SelfRoute(
-    new UserServiceImpl(
-      new MasterRoute(xa).services.userDao,
-      new AuthenticationDaoStub()
-    )
-  ).route
-
-  val route: Route = selfRoute ~ (new UserRouteDispatcher(
-    new UserServiceImpl(
-      new MasterRoute(xa).services.userDao,
-      new AuthenticationDaoStub()
-    )
-  ).route)
+  val route: Route = TestServices.masterRoute
   
   override def beforeEach(): Unit = cleanMigrate()
 

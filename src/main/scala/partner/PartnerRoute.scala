@@ -18,12 +18,17 @@ import user.User
 import response.ErrorResponse.NotFoundError
 import cats.Monad
 import scala.concurrent.Future
+import cats.effect.ConcurrentEffect
+import cats.effect.implicits._
+import request.RouteDispatcher
 
-class PartnerRoute(partnerService: PartnerService[IO]) {
-  val logger: Logger = Logger(classOf[PartnerRoute])
-  val partnerRouteI: PartnerRouteI[IO] = new PartnerRouteI[IO](partnerService)
+class PartnerRouteDispatcher[F[_]: ConcurrentEffect](
+    partnerService: PartnerService[F]
+) extends RouteDispatcher {
+  val logger: Logger = Logger[PartnerRoute[F]]
+  val partnerRoute: PartnerRoute[F] = new PartnerRoute[F](partnerService)
 
-  val route: Route = extractRequest { request =>
+  override val route: Route = extractRequest { request =>
     concat(
       path("partner") {
         get {
@@ -46,47 +51,34 @@ class PartnerRoute(partnerService: PartnerService[IO]) {
    **/
   def handleGetPartner(request: HttpRequest): Route = {
     val futureResponse: Future[Either[ErrorResponse, User]] =
-      partnerRouteI.getPartner(request).value.unsafeToFuture()
+      partnerRoute
+        .getPartner(request)
+        .value
+        .toIO
+        .unsafeToFuture()
 
     onSuccess(futureResponse) {
-      case Left(error) => complete(error.status, error)
-      case Right(user) => complete(user)
+      case Left(error: ErrorResponse) => complete(error.status, error)
+      case Right(user)                => complete(user)
     }
   }
 
   def connectUserToPartner(request: HttpRequest, connectCode: String): Route = {
     logger.info(s"POST /partner with connect code $connectCode.")
-    UserContext
-      .from(request)
-      .filterOrElse(
-        ctx => ctx.pid.isEmpty,
-        ClientError("User already has a partner.")
-      )
-      .map(ctx => ctx.uid)
-      .flatMap(uid =>
-        ConnectCode
-          .toId(connectCode)
-          .map(pid => (uid, pid))
-          .toRight(ClientError("Invalid connect code."))
-      )
-      .filterOrElse(
-        ids => ids._1 != ids._2,
-        ClientError("You can't partner with yourself.")
-      )
-      .map(ids => partnerService.connectUsers(ids._1, ids._2).value)
-      .fold(
-        e => complete(e.status, e),
-        tokensEffect =>
-          onSuccess(tokensEffect.unsafeToFuture()) {
-            case Left(e)  => complete(e.status, e)
-            case Right(v) => complete(v)
-          }
-      )
+    val tokensFuture = partnerRoute
+      .connectUsers(request, connectCode)
+      .value
+      .toIO
+      .unsafeToFuture()
+
+    onSuccess(tokensFuture) {
+      case Left(error: ErrorResponse) => complete(error.status, error)
+      case Right(tokens: Tokens)      => complete(tokens)
+    }
   }
 }
 
-// TODO move to Dispatch pattern
-class PartnerRouteI[F[_]: Monad](partnerService: PartnerService[F]) {
+class PartnerRoute[F[_]: Monad](partnerService: PartnerService[F]) {
   def getPartner(
       request: HttpRequest
   ): EitherT[F, ErrorResponse, User] =
@@ -97,4 +89,41 @@ class PartnerRouteI[F[_]: Monad](partnerService: PartnerService[F]) {
           .getPartner(user.uid)
           .toRight(NotFoundError("You haven't connected with a partner yet."))
       )
+
+  def connectUsers(
+      request: HttpRequest,
+      connectCode: String
+  ): EitherT[F, ErrorResponse, Tokens] = {
+    for {
+      ctx <- this.extractContext(request)
+      pid <- this.extractPid(ctx, connectCode)
+      tokens <- partnerService.connectUsers(ctx.uid, pid)
+    } yield tokens
+  }
+
+  private def extractContext(
+      request: HttpRequest
+  ): EitherT[F, ErrorResponse, UserContext] =
+    UserContext
+      .from(request)
+      .filterOrElse(
+        ctx => ctx.pid.isEmpty,
+        ClientError("User already has a partner.")
+      )
+      .toEitherT[F]
+      .leftWiden[ErrorResponse]
+
+  private def extractPid(
+      ctx: UserContext,
+      connectCode: String
+  ): EitherT[F, ErrorResponse, Int] =
+    ConnectCode
+      .toId(connectCode)
+      .toRight(ClientError("Invalid connect code."))
+      .filterOrElse(
+        pid => pid != ctx.uid,
+        ClientError("You can't partner with yourself.")
+      )
+      .toEitherT[F]
+      .leftWiden[ErrorResponse]
 }
