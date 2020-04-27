@@ -16,9 +16,11 @@ import cats.implicits._
 import scala.concurrent.Future
 import cats.data.EitherT
 import response.ErrorResponse.InternalError
+import request.RouteDispatcher
 
-class SelfRoute[F[_] : ConcurrentEffect](userService: UserService[F]) {
-  val logger: Logger = Logger(classOf[SelfRoute[F]])
+class SelfRouteDispatcher[F[_]: ConcurrentEffect](userService: UserService[F])
+    extends RouteDispatcher {
+  val logger: Logger = Logger[SelfRouteDispatcher[F]]
 
   val getSelfRoute: Route = path("self") {
     get {
@@ -28,13 +30,11 @@ class SelfRoute[F[_] : ConcurrentEffect](userService: UserService[F]) {
 
   val postSelfRoute: Route = path("self") {
     post {
-      extractRequest { request =>
-        postSelf(request)
-      }
+      extractRequest { request => postSelf(request) }
     }
   }
 
-  val route: Route = getSelfRoute ~ postSelfRoute
+  override val route: Route = getSelfRoute ~ postSelfRoute
 
   def postSelf(request: HttpRequest): Route = {
     logger.info("POST /self")
@@ -47,15 +47,18 @@ class SelfRoute[F[_] : ConcurrentEffect](userService: UserService[F]) {
   }
 
   def registerUser(ur: UserRegistration): Route = {
-    logger.info(f"Registering user: {firstName: ${ur.firstName}, lastName: ${ur.lastName}, email: ${ur.email}}")
-    val registerUserFuture = userService.registerUser(ur)
+    logger.info(
+      f"Registering user: {firstName: ${ur.firstName}, lastName: ${ur.lastName}, email: ${ur.email}}"
+    )
+    val registerUserFuture = userService
+      .registerUser(ur)
       .value
       .toIO
       .unsafeToFuture()
 
     onSuccess(registerUserFuture) {
       case Left(error: ErrorResponse) => complete(error.status, error)
-      case Right(tokens: Tokens) => complete(tokens)
+      case Right(tokens: Tokens)      => complete(tokens)
     }
   }
 
@@ -66,7 +69,7 @@ class SelfRoute[F[_] : ConcurrentEffect](userService: UserService[F]) {
       ctx <- EitherT.fromEither[F](UserContext.from(request))
       user <- userService.getUser(ctx.uid).leftMap {
         case NotFoundError(e) => InternalError()
-        case x => x
+        case x                => x
       }
     } yield user
 
@@ -74,7 +77,7 @@ class SelfRoute[F[_] : ConcurrentEffect](userService: UserService[F]) {
 
     onSuccess(userFuture) {
       case Left(error: ErrorResponse) => complete(error.status, error)
-      case Right(user: User) => complete(user)
+      case Right(user: User)          => complete(user)
     }
   }
 }

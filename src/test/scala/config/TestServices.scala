@@ -20,7 +20,7 @@ import user.UserServiceImpl
 import partner.PartnerService
 import partner.PartnerServiceImpl
 import health.HealthRouteDispatcher
-import user.SelfRoute
+import user.SelfRouteDispatcher
 import partner.PartnerRouteDispatcher
 import user.UserRouteDispatcher
 import cats.effect.ContextShift
@@ -55,7 +55,9 @@ object TestServices extends DatabaseTestMixin {
 
   val healthRouteDispatcher: HealthRouteDispatcher[IO] =
     new HealthRouteDispatcher(healthService)
-  val selfRouteDispatcher: SelfRoute[IO] = new SelfRoute(userService)
+  val selfRouteDispatcher: SelfRouteDispatcher[IO] = new SelfRouteDispatcher(
+    userService
+  )
   val partnerRouteDispatcher: PartnerRouteDispatcher[IO] =
     new PartnerRouteDispatcher(partnerService)
   val userRouteDispatcher: UserRouteDispatcher[IO] = new UserRouteDispatcher(

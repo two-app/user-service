@@ -28,7 +28,7 @@ trait UserDao[F[_]] {
 class DoobieUserDao[F[_]: Bracket[*[_], Throwable]](
     val xa: Transactor[F]
 ) extends UserDao[F] {
-  val logger: Logger = Logger(classOf[DoobieUserDao[F]])
+  val logger: Logger = Logger[DoobieUserDao[F]]
 
   override def storeUser(
       userRegistration: UserRegistration

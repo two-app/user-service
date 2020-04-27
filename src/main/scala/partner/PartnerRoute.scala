@@ -20,12 +20,15 @@ import cats.Monad
 import scala.concurrent.Future
 import cats.effect.ConcurrentEffect
 import cats.effect.implicits._
+import request.RouteDispatcher
 
-class PartnerRouteDispatcher[F[_]: ConcurrentEffect](partnerService: PartnerService[F]) {
+class PartnerRouteDispatcher[F[_]: ConcurrentEffect](
+    partnerService: PartnerService[F]
+) extends RouteDispatcher {
   val logger: Logger = Logger[PartnerRoute[F]]
   val partnerRoute: PartnerRoute[F] = new PartnerRoute[F](partnerService)
 
-  val route: Route = extractRequest { request =>
+  override val route: Route = extractRequest { request =>
     concat(
       path("partner") {
         get {
@@ -56,13 +59,14 @@ class PartnerRouteDispatcher[F[_]: ConcurrentEffect](partnerService: PartnerServ
 
     onSuccess(futureResponse) {
       case Left(error: ErrorResponse) => complete(error.status, error)
-      case Right(user) => complete(user)
+      case Right(user)                => complete(user)
     }
   }
 
   def connectUserToPartner(request: HttpRequest, connectCode: String): Route = {
     logger.info(s"POST /partner with connect code $connectCode.")
-    val tokensFuture = partnerRoute.connectUsers(request, connectCode)
+    val tokensFuture = partnerRoute
+      .connectUsers(request, connectCode)
       .value
       .toIO
       .unsafeToFuture()

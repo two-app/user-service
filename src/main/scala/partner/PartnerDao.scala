@@ -8,6 +8,7 @@ import doobie.util.transactor.Transactor
 import db.DateTimeModule._
 import doobie.free.connection.ConnectionIO
 import doobie.implicits._
+import com.typesafe.scalalogging.Logger
 
 trait PartnerDao[F[_]] {
   def getPartnerId(uid: Int): OptionT[F, Int]
@@ -17,9 +18,14 @@ class DoobiePartnerDao[F[_]: Bracket[*[_], Throwable]](
     val xa: Transactor[F]
 ) extends PartnerDao[F] {
 
-  override def getPartnerId(uid: Int): OptionT[F, Int] = OptionT(
-    PartnerSql.getPartnerId(uid).transact(xa)
-  )
+  val logger: Logger = Logger[DoobiePartnerDao[F]]
+
+  override def getPartnerId(uid: Int): OptionT[F, Int] = {
+    logger.info(s"Retrieving partner of UID ${uid}")
+    OptionT(
+      PartnerSql.getPartnerId(uid).transact(xa)
+    )
+  }
 
 }
 

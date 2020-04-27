@@ -14,7 +14,7 @@ import cats.effect.implicits._
 class UserRouteDispatcher[F[_]: ConcurrentEffect](userService: UserService[F])
     extends RouteDispatcher {
 
-  val logger: Logger = Logger(classOf[UserRouteDispatcher[F]])
+  val logger: Logger = Logger[UserRouteDispatcher[F]]
   val userRoute: UserRoute[F] = new UserRoute(userService)
 
   override val route: Route = extractRequest { request =>

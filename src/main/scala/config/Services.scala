@@ -26,15 +26,15 @@ import request.RouteDispatcher
   */
 class Services[F[_]: Async: Timer: ConcurrentEffect](xa: Transactor[F]) {
 
-  val healthDao: HealthDao[F] = new DoobieHealthDao[F](xa)
-  val userDao: UserDao[F] = new DoobieUserDao[F](xa)
-  val authDao: AuthenticationDao[F] = new AuthenticationServiceDao[F]()
-  val coupleDao: CoupleDao[F] = new DoobieCoupleDao[F](xa)
-  val partnerDao: PartnerDao[F] = new DoobiePartnerDao[F](xa)
+  val healthDao: HealthDao[F] = new DoobieHealthDao(xa)
+  val userDao: UserDao[F] = new DoobieUserDao(xa)
+  val authDao: AuthenticationDao[F] = new AuthenticationServiceDao()
+  val coupleDao: CoupleDao[F] = new DoobieCoupleDao(xa)
+  val partnerDao: PartnerDao[F] = new DoobiePartnerDao(xa)
 
-  val healthService: HealthService[F] = new HealthServiceImpl[F](healthDao)
-  val userService: UserService[F] = new UserServiceImpl[F](userDao, authDao)
-  val partnerService: PartnerService[F] = new PartnerServiceImpl[F](
+  val healthService: HealthService[F] = new HealthServiceImpl(healthDao)
+  val userService: UserService[F] = new UserServiceImpl(userDao, authDao)
+  val partnerService: PartnerService[F] = new PartnerServiceImpl(
     userService,
     coupleDao,
     authDao,
@@ -42,21 +42,21 @@ class Services[F[_]: Async: Timer: ConcurrentEffect](xa: Transactor[F]) {
   )
 
   val healthRouteDispatcher: HealthRouteDispatcher[F] =
-    new HealthRouteDispatcher[F](healthService)
+    new HealthRouteDispatcher(healthService)
 
-  val selfRoute: SelfRoute[F] = new SelfRoute[F](userService)
+  val selfRoute: SelfRouteDispatcher[F] = new SelfRouteDispatcher(userService)
 
   val partnerRouteDispatcher: PartnerRouteDispatcher[F] =
-    new PartnerRouteDispatcher[F](partnerService)
+    new PartnerRouteDispatcher(partnerService)
 
   val userRouteDispatcher: UserRouteDispatcher[F] =
-    new UserRouteDispatcher[F](userService)
+    new UserRouteDispatcher(userService)
 
-  val masterRoute: Route = RouteDispatcher.mergeRoutes(
-    healthRouteDispatcher.route,
-    selfRoute.route,
-    partnerRouteDispatcher.route,
-    userRouteDispatcher.route
+  val masterRoute: Route = RouteDispatcher.mergeDispatchers(
+    healthRouteDispatcher,
+    selfRoute,
+    partnerRouteDispatcher,
+    userRouteDispatcher
   )
 
 }
