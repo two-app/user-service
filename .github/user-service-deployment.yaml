@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: user-service
-        image: docker.pkg.github.com/two-app/user-service/user-service:0.1.19
+        image: docker.pkg.github.com/two-app/user-service/user-service:0.1.2
         ports:
         - containerPort: 8080
         env:
@@ -34,12 +34,12 @@ spec:
         - name: JDBC_USERNAME
           valueFrom:
             secretKeyRef:
-              name: local-db
+              name: db-user-pass
               key: username
         - name: JDBC_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: local-db
+              name: db-user-pass
               key: password
         readinessProbe:
           httpGet:
@@ -101,8 +101,7 @@ metadata:
   name: user-service-rds
 subsets:
   - addresses:
-    - ip: 192.168.0.22
-#    - ip: user-service.czxkdyhdzjxs.eu-west-1.rds.amazonaws.com
+    - ip: user-service.czxkdyhdzjxs.eu-west-1.rds.amazonaws.com
     ports:
     - port: 3306
 ---
