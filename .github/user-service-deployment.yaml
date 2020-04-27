@@ -25,6 +25,8 @@ spec:
           value: "8080"
         - name: SERVER_HOST
           value: "0.0.0.0"
+        - name: SERVICE_AUTHENTICATION_LOCATION
+          value: "http://authentication-service:8080"
         - name: JDBC_URL
           value: "jdbc:mysql://user-service-rds/users"
         - name: JDBC_URL_WITHOUT_SCHEMA
@@ -32,12 +34,12 @@ spec:
         - name: JDBC_USERNAME
           valueFrom:
             secretKeyRef:
-              name: db-user-pass
+              name: local-db
               key: username
         - name: JDBC_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: db-user-pass
+              name: local-db
               key: password
         readinessProbe:
           httpGet:
@@ -99,7 +101,8 @@ metadata:
   name: user-service-rds
 subsets:
   - addresses:
-    - ip: user-service.czxkdyhdzjxs.eu-west-1.rds.amazonaws.com
+    - ip: 192.168.0.22
+#    - ip: user-service.czxkdyhdzjxs.eu-west-1.rds.amazonaws.com
     ports:
     - port: 3306
 ---

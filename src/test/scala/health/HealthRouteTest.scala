@@ -13,11 +13,18 @@ import response.ErrorResponse.InternalError
 import response.ErrorResponse
 import cats.effect.IO
 import java.sql.SQLException
+import cats.effect.ContextShift
+import scala.concurrent.ExecutionContext
 
 class HealthRouteTest extends AnyFunSpec with Matchers with ScalatestRouteTest {
 
+  // Implicit values required for testing
+  implicit val contextShift: ContextShift[IO] =
+    IO.contextShift(ExecutionContext.global)
+  implicit val timer = IO.timer(ExecutionContext.global)
+
   describe("healthy") {
-    val healthRoute: Route = new HealthRouteDispatcher(
+    val healthRoute: Route = new HealthRouteDispatcher[IO](
       () => EitherT.pure(1)
     ).route
 
@@ -30,7 +37,7 @@ class HealthRouteTest extends AnyFunSpec with Matchers with ScalatestRouteTest {
 
   describe("unhealthy") {
     describe("controlled failure") {
-      val unhealthyRoute: Route = new HealthRouteDispatcher(
+      val unhealthyRoute: Route = new HealthRouteDispatcher[IO](
         () => EitherT.leftT(InternalError())
       ).route
 
@@ -42,8 +49,8 @@ class HealthRouteTest extends AnyFunSpec with Matchers with ScalatestRouteTest {
     }
 
     describe("side effect failure") {
-      val unhealthyRoute: Route = new HealthRouteDispatcher(
-        () => EitherT.left(IO.raiseError(new SQLException("Test Message")))
+      val unhealthyRoute: Route = new HealthRouteDispatcher(() =>
+        EitherT.left(IO.raiseError(new SQLException("Test Message")))
       ).route
 
       it("should return an error response") {

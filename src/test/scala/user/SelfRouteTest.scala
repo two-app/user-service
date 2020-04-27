@@ -6,6 +6,7 @@ import akka.http.scaladsl.model.{ContentTypes, HttpRequest, StatusCodes}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import config.TestServices
 import spray.json.DefaultJsonProtocol.{jsonFormat2, _}
 import spray.json.{RootJsonFormat, _}
 import authentication.{AuthenticationDao, Tokens}
@@ -16,7 +17,6 @@ import request.UserContext
 import scala.util.Random
 import org.scalatest.funspec.AsyncFunSpec
 import authentication.AuthenticationDaoStub
-import config.MasterRoute
 import response.ErrorResponse
 import response.ErrorResponse.AuthorizationError
 import response.ErrorResponse.ClientError
@@ -25,12 +25,7 @@ import db.DatabaseTestMixin
 
 class SelfRouteTest extends AsyncFunSpec with Matchers with ScalatestRouteTest with BeforeAndAfterEach with DatabaseTestMixin {
 
-  val route: Route = new SelfRoute(
-    new UserServiceImpl(
-      new MasterRoute(xa).services.userDao,
-      new AuthenticationDaoStub()
-    )
-  ).route
+  val route: Route = TestServices.selfRouteDispatcher.route
 
   override def beforeEach(): Unit = cleanMigrate()
 

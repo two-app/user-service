@@ -4,6 +4,7 @@ import authentication.{AuthenticationDao, Tokens}
 import cats.data.EitherT
 import cats.implicits._
 import couple.{CoupleDao, CoupleRecord}
+import config.TestServices
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
@@ -16,7 +17,6 @@ import scala.concurrent.ExecutionContext.Implicits.{global => ec}
 import scala.concurrent.Future
 import db.DatabaseTestMixin
 import cats.effect.IO
-import config.MasterRoute
 import authentication.AuthenticationDaoStub
 import scala.util.Random
 import request.UserContext
@@ -30,17 +30,8 @@ class PartnerServiceTest
     with UserTestArbitraries
     with DatabaseTestMixin {
 
-  val userService: UserService[IO] = new UserServiceImpl[IO](
-    new MasterRoute(xa).services.userDao,
-    new AuthenticationDaoStub()
-  )
-
-  val partnerService: PartnerService[IO] = new PartnerServiceImpl[IO](
-    userService,
-    new MasterRoute(xa).services.coupleDao,
-    new AuthenticationDaoStub(),
-    new MasterRoute(xa).services.partnerDao
-  )
+  val userService: UserService[IO] = TestServices.userService
+  val partnerService: PartnerService[IO] = TestServices.partnerService
 
   override def beforeEach(): Unit = cleanMigrate()
 

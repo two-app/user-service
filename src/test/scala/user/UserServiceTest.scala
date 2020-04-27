@@ -16,7 +16,7 @@ import scala.concurrent.Future
 import java.time.Instant
 import org.scalatest.funspec.AnyFunSpec
 import cats.effect.IO
-import config.MasterRoute
+import config.TestServices
 import db.DatabaseTestMixin
 import config.Services
 import scala.util.Random
@@ -79,10 +79,7 @@ class UserServiceTest
     with BeforeAndAfterEach
     with DatabaseTestMixin {
 
-  var userService: UserService[IO] = new UserServiceImpl[IO](
-    new MasterRoute(xa).services.userDao,
-    new AuthenticationDaoStub[IO]()
-  )
+  var userService: UserService[IO] = TestServices.userService
 
   override def beforeEach(): Unit = cleanMigrate()
 

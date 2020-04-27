@@ -6,7 +6,7 @@ import cats.effect.ContextShift
 
 import authentication.{AuthenticationDao, AuthenticationServiceDao}
 import couple.{CoupleDao, DoobieCoupleDao}
-import partner.{PartnerRoute, PartnerService, PartnerServiceImpl}
+import partner.{PartnerRouteDispatcher, PartnerService, PartnerServiceImpl}
 import user._
 import partner.PartnerDao
 import partner.DoobiePartnerDao
@@ -15,11 +15,16 @@ import health.DoobieHealthDao
 import health.HealthService
 import health.HealthServiceImpl
 import doobie.util.transactor.Transactor
+import health.HealthRouteDispatcher
+import cats.effect.Timer
+import cats.effect.ConcurrentEffect
+import akka.http.scaladsl.server.Route
+import request.RouteDispatcher
 
 /**
   * Container for all pure code.
   */
-class Services[F[_]: Async](xa: Transactor[F]) {
+class Services[F[_]: Async: Timer: ConcurrentEffect](xa: Transactor[F]) {
 
   val healthDao: HealthDao[F] = new DoobieHealthDao[F](xa)
   val userDao: UserDao[F] = new DoobieUserDao[F](xa)
@@ -34,6 +39,24 @@ class Services[F[_]: Async](xa: Transactor[F]) {
     coupleDao,
     authDao,
     partnerDao
+  )
+
+  val healthRouteDispatcher: HealthRouteDispatcher[F] =
+    new HealthRouteDispatcher[F](healthService)
+
+  val selfRoute: SelfRoute[F] = new SelfRoute[F](userService)
+
+  val partnerRouteDispatcher: PartnerRouteDispatcher[F] =
+    new PartnerRouteDispatcher[F](partnerService)
+
+  val userRouteDispatcher: UserRouteDispatcher[F] =
+    new UserRouteDispatcher[F](userService)
+
+  val masterRoute: Route = RouteDispatcher.mergeRoutes(
+    healthRouteDispatcher.route,
+    selfRoute.route,
+    partnerRouteDispatcher.route,
+    userRouteDispatcher.route
   )
 
 }

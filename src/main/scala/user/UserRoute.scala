@@ -8,12 +8,14 @@ import cats.effect.IO
 import cats.data.EitherT
 import response.ErrorResponse
 import com.typesafe.scalalogging.Logger
+import cats.effect.ConcurrentEffect
+import cats.effect.implicits._
 
-class UserRouteDispatcher(userService: UserService[IO])
+class UserRouteDispatcher[F[_]: ConcurrentEffect](userService: UserService[F])
     extends RouteDispatcher {
 
-  val logger: Logger = Logger(classOf[UserRouteDispatcher])
-  val userRoute: UserRoute[IO] = new UserRoute(userService)
+  val logger: Logger = Logger(classOf[UserRouteDispatcher[F]])
+  val userRoute: UserRoute[F] = new UserRoute(userService)
 
   override val route: Route = extractRequest { request =>
     path("user") {
@@ -28,9 +30,12 @@ class UserRouteDispatcher(userService: UserService[IO])
 
   def handleGetUser(email: String): Route = {
     logger.info(s"GET /user with email ${email}")
-    val userEffect = userRoute.getUser(email)
+    val userFuture = userRoute.getUser(email)
+      .value
+      .toIO
+      .unsafeToFuture()
 
-    onSuccess(userEffect.value.unsafeToFuture()) {
+    onSuccess(userFuture) {
       case Left(error: ErrorResponse) => complete(error.status, error)
       case Right(user: User)          => complete(user)
     }
@@ -38,9 +43,12 @@ class UserRouteDispatcher(userService: UserService[IO])
 
   def handleGetUser(uid: Int): Route = {
     logger.info(s"GET /user with UID ${uid}")
-    val userEffect = userRoute.getUser(uid)
+    val userFuture = userRoute.getUser(uid)
+      .value
+      .toIO
+      .unsafeToFuture()
 
-    onSuccess(userEffect.value.unsafeToFuture()) {
+    onSuccess(userFuture) {
       case Left(error: ErrorResponse) => complete(error.status, error)
       case Right(user: User)          => complete(user)
     }

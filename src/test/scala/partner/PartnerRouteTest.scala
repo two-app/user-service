@@ -7,26 +7,24 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
+import authentication.AuthTestArbitraries
+import authentication.AuthenticationDaoStub
 import authentication.Tokens
-import cats.data.EitherT
-import cats.implicits._
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.funspec.AsyncFunSpec
 import org.scalatest.matchers.should.Matchers
+import cats.data.EitherT
+import cats.implicits._
+import config.Services
+import config.TestServices
+import db.DatabaseTestMixin
+import request.UserContext
 import response.ErrorResponse
 import response.ErrorResponse.ClientError
-import authentication.AuthTestArbitraries
 import user.UserTestArbitraries
-import db.DatabaseTestMixin
-import config.MasterRoute
-import cats.effect.IO
-import user.UserServiceImpl
-import authentication.AuthenticationDaoStub
-import user.SelfRoute
-import request.UserContext
-import response.ErrorResponse.NotFoundError
 import user.User
+import response.ErrorResponse.NotFoundError
 import scala.reflect.ClassTag
 
 class PartnerRouteTest
@@ -41,29 +39,12 @@ class PartnerRouteTest
   val userOneConnectCode = "zQp7Wl"
   val userTwoConnectCode = "0Q3ar8"
 
-  val partnerRoute: Route = new PartnerRoute(
-    new PartnerServiceImpl[IO](
-      new UserServiceImpl[IO](
-        new MasterRoute(xa).services.userDao,
-        new AuthenticationDaoStub()
-      ),
-      new MasterRoute(xa).services.coupleDao,
-      new AuthenticationDaoStub(),
-      new MasterRoute(xa).services.partnerDao
-    )
-  ).route
-
-  val userRoute: Route = new SelfRoute(
-    new UserServiceImpl[IO](
-      new MasterRoute(xa).services.userDao,
-      new AuthenticationDaoStub()
-    )
-  ).route
+  val route: Route = TestServices.masterRoute
 
   override def beforeEach(): Unit = cleanMigrate()
 
   def registerUser(): Tokens =
-    Post("/self", randomUserRegistration()) ~> userRoute ~> check {
+    Post("/self", randomUserRegistration()) ~> route ~> check {
       entityAs[Tokens]
     }
 
@@ -73,12 +54,12 @@ class PartnerRouteTest
   ): T =
     Post(s"/partner/$connectCode").withHeaders(
       authHeader(tokens.accessToken)
-    ) ~> partnerRoute ~> check {
+    ) ~> route ~> check {
       entityAs[T]
     }
 
   def getPartner[T: FromEntityUnmarshaller: ClassTag](tokens: Tokens): T = {
-    Get("/partner").withHeaders(authHeader(tokens.accessToken)) ~> partnerRoute ~> check {
+    Get("/partner").withHeaders(authHeader(tokens.accessToken)) ~> route ~> check {
       entityAs[T]
     }
   }
