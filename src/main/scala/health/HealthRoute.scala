@@ -17,7 +17,6 @@ import cats.effect.Timer
 import cats.effect.ConcurrentEffect
 import cats.Monad
 import cats.effect.implicits._
-import cats.data.EitherT
 
 class HealthRouteDispatcher[F[_]: Timer : ConcurrentEffect : Monad](healthService: HealthService[F])
     extends RouteDispatcher {
