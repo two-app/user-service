@@ -6,6 +6,7 @@ import akka.http.scaladsl.model.{ContentTypes, HttpRequest, StatusCodes}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import config.TestServices
 import spray.json.DefaultJsonProtocol.{jsonFormat2, _}
 import spray.json.{RootJsonFormat, _}
@@ -22,53 +23,63 @@ import response.ErrorResponse.AuthorizationError
 import response.ErrorResponse.ClientError
 import org.scalatest.BeforeAndAfterEach
 import db.DatabaseTestMixin
+import scala.reflect.ClassTag
+import authentication.AuthTestArbitraries
 
-class SelfRouteTest extends AsyncFunSpec with Matchers with ScalatestRouteTest with BeforeAndAfterEach with DatabaseTestMixin {
+class SelfRouteTest
+    extends AsyncFunSpec
+    with Matchers
+    with ScalatestRouteTest
+    with BeforeAndAfterEach
+    with UserTestArbitraries
+    with AuthTestArbitraries
+    with DatabaseTestMixin {
 
-  val route: Route = TestServices.selfRouteDispatcher.route
+  val route: Route = TestServices.masterRoute
+
+  implicit val UserRegistrationFormat: RootJsonFormat[UserRegistration] =
+    jsonFormat6(UserRegistration.apply)
+
+  def PostSelf[T: FromEntityUnmarshaller: ClassTag](
+      registration: UserRegistration
+  ): T = {
+    Post("/self", registration) ~> route ~> check {
+      entityAs[T]
+    }
+  }
+
+  def GetSelf[T: FromEntityUnmarshaller: ClassTag](
+      tokens: Tokens
+  ): T = {
+    Get("/self").withHeaders(authHeader(tokens.accessToken)) ~> route ~> check {
+      entityAs[T]
+    }
+  }
 
   override def beforeEach(): Unit = cleanMigrate()
 
-  def authHeader(token: String): List[RawHeader] =
-    List(RawHeader("Authorization", s"Bearer $token"))
-
   describe("POST /self") {
-    implicit val UserRegistrationFormat: RootJsonFormat[UserRegistration] =
-      jsonFormat6(UserRegistration.apply)
-
     it("should return a 400 Bad Request with a duplicate email") {
-      val registration: UserRegistration = newUser()
+      val registration: UserRegistration = randomUserRegistration()
 
-      Post("/self", registration) ~> route ~> check {
-        response.status shouldBe StatusCodes.OK
+      PostSelf[Tokens](registration)
+      val response = PostSelf[ErrorResponse](registration)
 
-        Post("/self", registration) ~> route ~> check {
-          entityAs[ErrorResponse] shouldBe ClientError(
-            "An account with this email exists."
-          )
-        }
-      }
+      response shouldBe ClientError("An account with this email exists.")
     }
 
     it("should store a valid user") {
-      val registration: UserRegistration = newUser()
+      val registration: UserRegistration = randomUserRegistration()
 
-      Post("/self", registration) ~> route ~> check {
-        response.status shouldBe StatusCodes.OK
-        val tokens: Tokens = entityAs[Tokens]
-        val tokenUID: Int = UserContext.from(tokens.accessToken).right.get.uid
+      val tokens = PostSelf[Tokens](registration)
 
-        Get("/self").withHeaders(authHeader(tokens.accessToken)) ~> route ~> check {
-          response.status shouldBe StatusCodes.OK
-          val user: User = responseAs[User]
+      val user: User = GetSelf[User](tokens)
 
-          user.uid shouldBe tokenUID
-          user.pid shouldBe None
-          user.cid shouldBe None
-          user.firstName shouldBe registration.firstName
-          user.lastName shouldBe registration.lastName
-        }
-      }
+      user.uid shouldBe extractContext(tokens).uid
+      user.pid shouldBe None
+      user.cid shouldBe None
+      user.firstName shouldBe registration.firstName
+      user.lastName shouldBe registration.lastName
     }
   }
 
@@ -92,19 +103,5 @@ class SelfRouteTest extends AsyncFunSpec with Matchers with ScalatestRouteTest w
       }
     }
   }
-
-  def newUser(): UserRegistration = UserRegistration(
-    firstName = "First",
-    lastName = "Last",
-    email = randomEmail(),
-    password = "StrongPassword",
-    acceptedTerms = true,
-    ofAge = true
-  )
-
-  def randomEmail(): String =
-    "userServiceWorkflowTest-" + Random.alphanumeric
-      .take(10)
-      .mkString + "@twotest.com"
 
 }

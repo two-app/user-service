@@ -17,6 +17,7 @@ import cats.effect.Timer
 import cats.effect.ConcurrentEffect
 import cats.Monad
 import cats.effect.implicits._
+import cats.data.EitherT
 
 class HealthRouteDispatcher[F[_]: Timer : ConcurrentEffect : Monad](healthService: HealthService[F])
     extends RouteDispatcher {
@@ -30,11 +31,10 @@ class HealthRouteDispatcher[F[_]: Timer : ConcurrentEffect : Monad](healthServic
   }
 
   def handleHealthGet(): Route = {
-    type ToFuture[F[_]] = ConcurrentEffect[F]
     logger.info("GET /health - Performing health check.")
     val healthFuture = healthService.getHealth().leftWiden[ErrorResponse]
       .value
-      .timeout(5.seconds)
+      .timeout(3.seconds)
       .toIO
       .unsafeToFuture()
 

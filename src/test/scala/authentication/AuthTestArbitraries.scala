@@ -20,6 +20,9 @@ trait AuthTestArbitraries {
   def authHeader(jwt: String): RawHeader =
     RawHeader("Authorization", s"Bearer $jwt")
 
+  def extractContext(tokens: Tokens): UserContext =
+    this.extractContext(tokens.accessToken)
+
   def extractContext(accessToken: String): UserContext =
     UserContext.from(accessToken).right.get
 

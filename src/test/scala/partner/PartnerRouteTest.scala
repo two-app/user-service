@@ -55,6 +55,7 @@ class PartnerRouteTest
     Post(s"/partner/$connectCode").withHeaders(
       authHeader(tokens.accessToken)
     ) ~> route ~> check {
+      println(entityAs[String])
       entityAs[T]
     }
 
