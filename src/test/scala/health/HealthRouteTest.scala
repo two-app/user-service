@@ -24,9 +24,8 @@ class HealthRouteTest extends AnyFunSpec with Matchers with ScalatestRouteTest {
   implicit val timer = IO.timer(ExecutionContext.global)
 
   describe("healthy") {
-    val healthRoute: Route = new HealthRouteDispatcher[IO](
-      () => EitherT.pure(1)
-    ).route
+    val healthRoute: Route =
+      new HealthRouteDispatcher[IO](() => EitherT.pure(1)).route
 
     it("should return 200 OK") {
       Get("/health") ~> healthRoute ~> check {
@@ -37,8 +36,8 @@ class HealthRouteTest extends AnyFunSpec with Matchers with ScalatestRouteTest {
 
   describe("unhealthy") {
     describe("controlled failure") {
-      val unhealthyRoute: Route = new HealthRouteDispatcher[IO](
-        () => EitherT.leftT(InternalError())
+      val unhealthyRoute: Route = new HealthRouteDispatcher[IO](() =>
+        EitherT.leftT(InternalError())
       ).route
 
       it("should return an error response") {

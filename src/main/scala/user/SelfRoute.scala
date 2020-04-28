@@ -20,46 +20,34 @@ import request.RouteDispatcher
 
 class SelfRouteDispatcher[F[_]: ConcurrentEffect](userService: UserService[F])
     extends RouteDispatcher {
-  val logger: Logger = Logger[SelfRouteDispatcher[F]]
+  implicit val logger: Logger = Logger[SelfRouteDispatcher[F]]
 
-  val getSelfRoute: Route = path("self") {
-    get {
-      extractRequest { request => getSelf(request) }
+  override val route: Route = extractRequest { request =>
+    path("self") {
+      concat(
+        get {
+          getSelf(request)
+        },
+        post {
+          entity(as[Either[ModelValidationError, UserRegistration]]) { entity =>
+            postSelf(request, entity)
+          }
+        }
+      )
     }
   }
 
-  val postSelfRoute: Route = path("self") {
-    post {
-      extractRequest { request => postSelf(request) }
-    }
-  }
-
-  override val route: Route = getSelfRoute ~ postSelfRoute
-
-  def postSelf(request: HttpRequest): Route = {
+  def postSelf(
+      request: HttpRequest,
+      entity: Either[ModelValidationError, UserRegistration]
+  ): Route = {
     logger.info("POST /self")
-    entity(as[Either[ModelValidationError, UserRegistration]]) {
-      case Left(e) =>
-        val clientError: ErrorResponse = ClientError(e.reason)
-        complete(clientError.status, clientError)
-      case Right(userRegistration) => registerUser(userRegistration)
-    }
-  }
+    val tokensEffect = for {
+      registration <- entity.toEitherT[F].leftMap(mve => ClientError(mve.reason))
+      tokens <- userService.registerUser(registration)
+    } yield tokens
 
-  def registerUser(ur: UserRegistration): Route = {
-    logger.info(
-      f"Registering user: {firstName: ${ur.firstName}, lastName: ${ur.lastName}, email: ${ur.email}}"
-    )
-    val registerUserFuture = userService
-      .registerUser(ur)
-      .value
-      .toIO
-      .unsafeToFuture()
-
-    onSuccess(registerUserFuture) {
-      case Left(error: ErrorResponse) => complete(error.status, error)
-      case Right(tokens: Tokens)      => complete(tokens)
-    }
+    completeEffectfulEither(tokensEffect)
   }
 
   def getSelf(request: HttpRequest): Route = {
@@ -73,11 +61,6 @@ class SelfRouteDispatcher[F[_]: ConcurrentEffect](userService: UserService[F])
       }
     } yield user
 
-    val userFuture = userEffect.value.toIO.unsafeToFuture()
-
-    onSuccess(userFuture) {
-      case Left(error: ErrorResponse) => complete(error.status, error)
-      case Right(user: User)          => complete(user)
-    }
+    completeEffectfulEither(userEffect)
   }
 }

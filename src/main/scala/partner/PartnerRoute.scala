@@ -25,7 +25,7 @@ import request.RouteDispatcher
 class PartnerRouteDispatcher[F[_]: ConcurrentEffect](
     partnerService: PartnerService[F]
 ) extends RouteDispatcher {
-  val logger: Logger = Logger[PartnerRoute[F]]
+  implicit val logger: Logger = Logger[PartnerRoute[F]]
   val partnerRoute: PartnerRoute[F] = new PartnerRoute[F](partnerService)
 
   override val route: Route = extractRequest { request =>
@@ -50,31 +50,17 @@ class PartnerRouteDispatcher[F[_]: ConcurrentEffect](
     * Therefor we cannot rely on the PID being present.
    **/
   def handleGetPartner(request: HttpRequest): Route = {
-    val futureResponse: Future[Either[ErrorResponse, User]] =
-      partnerRoute
-        .getPartner(request)
-        .value
-        .toIO
-        .unsafeToFuture()
-
-    onSuccess(futureResponse) {
-      case Left(error: ErrorResponse) => complete(error.status, error)
-      case Right(user)                => complete(user)
-    }
+    logger.info(s"GET /partner")
+    completeEffectfulEither(
+      partnerRoute.getPartner(request)
+    )
   }
 
   def connectUserToPartner(request: HttpRequest, connectCode: String): Route = {
     logger.info(s"POST /partner with connect code $connectCode.")
-    val tokensFuture = partnerRoute
-      .connectUsers(request, connectCode)
-      .value
-      .toIO
-      .unsafeToFuture()
-
-    onSuccess(tokensFuture) {
-      case Left(error: ErrorResponse) => complete(error.status, error)
-      case Right(tokens: Tokens)      => complete(tokens)
-    }
+    completeEffectfulEither(
+      partnerRoute.connectUsers(request, connectCode)
+    )
   }
 }
 

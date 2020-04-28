@@ -30,11 +30,10 @@ class HealthRouteDispatcher[F[_]: Timer : ConcurrentEffect : Monad](healthServic
   }
 
   def handleHealthGet(): Route = {
-    type ToFuture[F[_]] = ConcurrentEffect[F]
     logger.info("GET /health - Performing health check.")
     val healthFuture = healthService.getHealth().leftWiden[ErrorResponse]
       .value
-      .timeout(5.seconds)
+      .timeout(3.seconds)
       .toIO
       .unsafeToFuture()
 
