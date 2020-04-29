@@ -1,6 +1,6 @@
 name := "user-service"
 
-version := "0.1.21"
+version := "0.1.22"
 
 scalaVersion := "2.13.1"
 
@@ -49,5 +49,6 @@ parallelExecution in Test := false
 libraryDependencies += "org.typelevel" %% "cats-core" % "2.0.0"
 addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.0" cross CrossVersion.full)
 
+dockerBaseImage := "adoptopenjdk/openjdk11"
 dockerRepository := Some("docker.pkg.github.com/two-app/user-service")
 dockerUpdateLatest := true
