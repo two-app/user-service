@@ -50,9 +50,11 @@ object WebServer extends IOApp {
       : Resource[M, HikariDataSource] = {
     val hikariConfig = new HikariConfig()
     hikariConfig.setDriverClassName(DatabaseConfig.driver)
-    hikariConfig.setJdbcUrl(DatabaseConfig.jdbc)
+    hikariConfig.setJdbcUrl(DatabaseConfig.jdbcWithoutSchema)
     hikariConfig.setUsername(DatabaseConfig.username)
     hikariConfig.setPassword(DatabaseConfig.password)
+
+    logger.info(s"Connecting to JDBC URL: ${DatabaseConfig.jdbcWithoutSchema}")
 
     val alloc = Sync[M].delay(new HikariDataSource(hikariConfig))
     val free = (ds: HikariDataSource) => Sync[M].delay(ds.close())
