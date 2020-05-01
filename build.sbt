@@ -1,6 +1,6 @@
 name := "user-service"
 
-version := "0.1.26"
+version := "0.1.27"
 
 scalaVersion := "2.13.1"
 
