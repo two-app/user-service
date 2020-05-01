@@ -5,6 +5,7 @@ import config.Config
 object DatabaseConfig {
 
   val driver: String = Config.getProperty("db.driver")
+  val connectionPoolSize: Int = Config.load().getInt("db.connectionPoolSize")
   val jdbc: String = Config.getProperty("db.jdbc")
   val schema: String = Config.getProperty("db.schema")
   val jdbcWithSchema: String = s"${jdbc}/${schema}"
