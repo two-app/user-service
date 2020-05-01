@@ -13,7 +13,7 @@ trait DatabaseTestMixin {
 
   val xa: Transactor[IO] = Transactor.fromDriverManager[IO](
     DatabaseConfig.driver,
-    DatabaseConfig.jdbc,
+    DatabaseConfig.jdbcWithSchema,
     DatabaseConfig.username,
     DatabaseConfig.password,
     Blocker.liftExecutionContext(ExecutionContexts.synchronous)
@@ -22,7 +22,7 @@ trait DatabaseTestMixin {
   val flyway: Flyway = Flyway
     .configure()
     .dataSource(
-      DatabaseConfig.jdbcWithoutSchema,
+      DatabaseConfig.jdbc,
       DatabaseConfig.username,
       DatabaseConfig.password
     )

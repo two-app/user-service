@@ -31,9 +31,5 @@ jobs:
         with:
           path: ~/.sbt
           key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt') }}
-      - name: Clean Database
-        run: sbt --debug flywayClean
-      - name: Migrate Database
-        run: sbt --debug flywayMigrate
       - name: Run tests
-        run: sbt test
+        run: sbt flywayClean flywayMigrate test
