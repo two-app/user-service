@@ -19,8 +19,6 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 11.0.3
-      - name: Prepare SBT and Dependencies
-        run: sbt update
       - name: Cache SBT ivy cache
         uses: actions/cache@v1
         with:
