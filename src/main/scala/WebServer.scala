@@ -55,7 +55,7 @@ object WebServer extends IOApp {
     hikariConfig.setPassword(DatabaseConfig.password)
     hikariConfig.setMaximumPoolSize(DatabaseConfig.connectionPoolSize)
 
-    logger.info(s"Connecting to JDBC URL: ${DatabaseConfig.jdbcWithSchema}")
+    logger.info(s"Connecting to JDBC URL: ${DatabaseConfig.jdbcWithSchema} with username ${DatabaseConfig.username}.")
 
     val alloc = Sync[M].delay(new HikariDataSource(hikariConfig))
     val free = (ds: HikariDataSource) => Sync[M].delay(ds.close())
