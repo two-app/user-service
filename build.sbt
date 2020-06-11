@@ -6,9 +6,9 @@ scalaVersion := "2.13.1"
 
 /** Akka */
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-http" % "10.1.11",
+  "com.typesafe.akka" %% "akka-http" % "10.1.12",
   "com.typesafe.akka" %% "akka-stream" % "2.5.26",
-  "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.11"
+  "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.12"
 )
 
 /** Libs */
@@ -31,7 +31,7 @@ libraryDependencies ++= Seq(
   "org.scalactic" %% "scalactic" % "3.1.0",
   "org.scalatest" %% "scalatest" % "3.1.0" % "test",
   "com.typesafe.akka" %% "akka-stream-testkit" % "2.5.26",
-  "com.typesafe.akka" %% "akka-http-testkit" % "10.1.11"
+  "com.typesafe.akka" %% "akka-http-testkit" % "10.1.12"
 )
 
 enablePlugins(JavaAppPackaging)
