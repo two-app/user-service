@@ -1,25 +1,14 @@
 package config
 
-import cats.effect.Sync
-import cats.effect.Async
-import cats.effect.ContextShift
-
-import authentication.{AuthenticationDao, AuthenticationServiceDao}
-import couple.{CoupleDao, DoobieCoupleDao}
-import partner.{PartnerRouteDispatcher, PartnerService, PartnerServiceImpl}
-import user._
-import partner.PartnerDao
-import partner.DoobiePartnerDao
-import health.HealthDao
-import health.DoobieHealthDao
-import health.HealthService
-import health.HealthServiceImpl
-import doobie.util.transactor.Transactor
-import health.HealthRouteDispatcher
-import cats.effect.Timer
-import cats.effect.ConcurrentEffect
 import akka.http.scaladsl.server.Route
+import authentication.{AuthenticationDao, AuthenticationServiceDao}
+import cats.effect.{Async, ConcurrentEffect, Timer}
+import couple.{CoupleDao, DoobieCoupleDao}
+import doobie.util.transactor.Transactor
+import health._
+import partner._
 import request.RouteDispatcher
+import user._
 
 /**
   * Container for all pure code.

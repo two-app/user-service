@@ -22,3 +22,4 @@ project/plugins/project/
 .vscode
 .bloop
 project/metals.sbt
+out/
