@@ -1,6 +1,5 @@
 package authentication
 
-import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.model.{
@@ -10,18 +9,15 @@ import akka.http.scaladsl.model.{
   HttpRequest
 }
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import akka.stream.ActorMaterializer
+import cats.effect.Async
+import com.typesafe.scalalogging.Logger
 import config.Config
+import config.RootActorSystem._
 import spray.json.DefaultJsonProtocol.{jsonFormat2, _}
 import spray.json.{RootJsonFormat, _}
 
-import scala.concurrent.ExecutionContext.Implicits.{global => ec}
 import scala.concurrent.Future
-import cats.effect.IO
-import cats.effect.Async
-import scala.util.Failure
-import scala.util.Success
-import com.typesafe.scalalogging.Logger
+import scala.util.{Failure, Success}
 
 case class Credentials(uid: Int, password: String)
 
@@ -41,8 +37,6 @@ class AuthenticationServiceDao[F[_]: Async] extends AuthenticationDao[F] {
   implicit val CredentialsFormat: RootJsonFormat[Credentials] = jsonFormat2(
     Credentials
   )
-  implicit val system: ActorSystem = ActorSystem()
-  implicit val materialise: ActorMaterializer = ActorMaterializer()
 
   val logger: Logger = Logger[AuthenticationServiceDao[F]]
 
@@ -61,7 +55,12 @@ class AuthenticationServiceDao[F[_]: Async] extends AuthenticationDao[F] {
     logger.info("Performing POST to authentication service on /credentials")
 
     val futureTokens: Future[Tokens] =
-      Http().singleRequest(request).flatMap(r => Unmarshal(r).to[Tokens])
+      Http()
+        .singleRequest(request)
+        .flatMap(r => {
+          r.discardEntityBytes()
+          Unmarshal(r).to[Tokens]
+        })
     httpFutureToF(futureTokens)
   }
 

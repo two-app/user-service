@@ -1,27 +1,17 @@
 package config
 
-import db.DatabaseTestMixin
-import cats.effect.IO
-import user.UserDao
-import user.DoobieUserDao
-import authentication.AuthenticationDao
-import authentication.AuthenticationDaoStub
-import authentication.AuthenticationServiceDao
-import couple.CoupleDao
-import couple.DoobieCoupleDao
-import partner.PartnerDao
-import partner.DoobiePartnerDao
-import user.UserService
-import user.UserServiceImpl
-import partner.PartnerService
-import partner.PartnerServiceImpl
-import user.SelfRouteDispatcher
-import partner.PartnerRouteDispatcher
-import user.UserRouteDispatcher
-import cats.effect.ContextShift
-import scala.concurrent.ExecutionContext
 import akka.http.scaladsl.server.Route
+import authentication.{
+  AuthenticationDao,
+  AuthenticationDaoStub,
+  AuthenticationServiceDao
+}
+import cats.effect.IO
+import couple.{CoupleDao, DoobieCoupleDao}
+import db.DatabaseTestMixin
+import partner._
 import request.RouteDispatcher
+import user._
 
 object TestServices extends DatabaseTestMixin {
   val userDao: UserDao[IO] = new DoobieUserDao(xa)

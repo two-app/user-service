@@ -1,64 +1,62 @@
-import akka.http.scaladsl.server.{HttpApp, Route}
-import config.Services
-import config.Config
-import db.FlywayHelper
-import cats.effect._
-import doobie._
-import doobie.implicits._
-import doobie.hikari._
-import com.zaxxer.hikari.HikariDataSource
-import com.zaxxer.hikari.HikariConfig
-import db.DatabaseConfig
+import akka.http.scaladsl.Http
+import cats.effect.{ExitCode, IO, IOApp, _}
 import com.typesafe.scalalogging.Logger
+import config.RootActorSystem._
+import config.{Config, Services}
+import db.{DatabaseConfig, FlywayHelper}
+import doobie._
+import doobie.hikari._
 
-class Server[F[_] : Timer : ConcurrentEffect](xa: Transactor[F]) extends HttpApp {
-  override protected def routes: Route = new Services[F](xa).masterRoute
-}
+import scala.concurrent.duration._
+import scala.io.StdIn
 
 object WebServer extends IOApp {
 
   val logger: Logger = Logger("WebServer")
 
-  val transactor: Resource[IO, HikariTransactor[IO]] =
-    for {
-      ce <- ExecutionContexts.fixedThreadPool[IO](
-        DatabaseConfig.connectionPoolSize
-      )
-      be <- Blocker[IO]
-      ds <- createDataSourceResource[IO]()
-      xa = HikariTransactor[IO](ds, ce, be)
-    } yield xa
-
-  def run(args: List[String]): IO[ExitCode] = {
-    logger.info("Application started up. Applying migrations...")
+  override def run(args: List[String]): IO[ExitCode] = {
+    logger.info("Migrating database...")
     FlywayHelper.migrate()
-    logger.info("Finished migrating. Loading Transactor...")
+
+    logger.info("Migrated database. Starting thread pool...")
     transactor.use { xa =>
-      logger.info("Transactor successfully loaded.")
+      logger.info("Thread pool transactor successfully loaded.")
       val host: String = Config.load().getString("server.host")
       val port: Int = Config.load().getInt("server.port")
+      val route = new Services(xa).masterRoute
 
-      logger.info(s"Starting server on configured host ${host} and port ${port}.")
-      new Server(xa).startServer(host, port)
+      logger.info(
+        f"Starting server on configured host $host and port $port."
+      )
 
-      logger.info("Server finished blocking. Exiting with success.")
+      val bind = Http().bindAndHandle(route, host, port)
+
+      logger.info("Successfully bound to host and port.")
+      logger.info("Press enter to terminate...")
+
+      StdIn.readLine()
+
+      logger.info("Terminating server with 5 second grace period...")
+      bind.flatMap(_.terminate(5.second)).flatMap(_ => system.terminate())
+
+      logger.info("Terminated.")
       IO(ExitCode.Success)
     }
   }
 
-  private def createDataSourceResource[M[_]: Sync]()
-      : Resource[M, HikariDataSource] = {
-    val hikariConfig = new HikariConfig()
-    hikariConfig.setDriverClassName(DatabaseConfig.driver)
-    hikariConfig.setJdbcUrl(DatabaseConfig.jdbcWithSchema)
-    hikariConfig.setUsername(DatabaseConfig.username)
-    hikariConfig.setPassword(DatabaseConfig.password)
-    hikariConfig.setMaximumPoolSize(DatabaseConfig.connectionPoolSize)
-
-    logger.info(s"Connecting to JDBC URL: ${DatabaseConfig.jdbcWithSchema} with username ${DatabaseConfig.username}.")
-
-    val alloc = Sync[M].delay(new HikariDataSource(hikariConfig))
-    val free = (ds: HikariDataSource) => Sync[M].delay(ds.close())
-    Resource.make(alloc)(free)
-  }
+  def transactor: Resource[IO, Transactor[IO]] =
+    for {
+      context <- ExecutionContexts.fixedThreadPool[IO](
+        DatabaseConfig.connectionPoolSize
+      )
+      blocker <- Blocker[IO]
+      transactor <- HikariTransactor.newHikariTransactor[IO](
+        driverClassName = DatabaseConfig.driver,
+        url = DatabaseConfig.jdbcWithSchema,
+        user = DatabaseConfig.username,
+        pass = DatabaseConfig.password,
+        connectEC = context,
+        blocker = blocker
+      )
+    } yield transactor
 }
